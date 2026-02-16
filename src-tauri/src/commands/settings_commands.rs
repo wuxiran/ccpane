@@ -189,28 +189,32 @@ pub fn migrate_data_dir(
 /// 复制文件（如果源文件存在）
 fn copy_if_exists(src: &Path, dst: &Path) -> AppResult<()> {
     if src.exists() {
+        let name = crate::utils::sanitize_path_display(src);
         std::fs::copy(src, dst)
-            .map_err(|e| format!("复制 {} 失败: {}", src.display(), e))?;
+            .map_err(|e| format!("复制 {} 失败: {}", name, e))?;
     }
     Ok(())
 }
 
 /// 递归复制目录（跳过符号链接）
 fn copy_dir_recursive(src: &Path, dst: &Path) -> AppResult<()> {
+    let dst_name = crate::utils::sanitize_path_display(dst);
     std::fs::create_dir_all(dst)
-        .map_err(|e| format!("创建目录 {} 失败: {}", dst.display(), e))?;
+        .map_err(|e| format!("创建目录 {} 失败: {}", dst_name, e))?;
 
+    let src_name = crate::utils::sanitize_path_display(src);
     let entries = std::fs::read_dir(src)
-        .map_err(|e| format!("读取目录 {} 失败: {}", src.display(), e))?;
+        .map_err(|e| format!("读取目录 {} 失败: {}", src_name, e))?;
 
     for entry in entries {
         let entry = entry.map_err(|e| format!("读取目录项失败: {}", e))?;
         let src_path = entry.path();
         let dst_path = dst.join(entry.file_name());
+        let file_name = entry.file_name().to_string_lossy().to_string();
 
         // 使用 symlink_metadata 检查，跳过符号链接
         let meta = std::fs::symlink_metadata(&src_path)
-            .map_err(|e| format!("读取元数据失败 {}: {}", src_path.display(), e))?;
+            .map_err(|e| format!("读取元数据失败 {}: {}", file_name, e))?;
         if meta.is_symlink() {
             continue;
         }
@@ -219,7 +223,7 @@ fn copy_dir_recursive(src: &Path, dst: &Path) -> AppResult<()> {
             copy_dir_recursive(&src_path, &dst_path)?;
         } else if meta.is_file() {
             std::fs::copy(&src_path, &dst_path)
-                .map_err(|e| format!("复制 {} 失败: {}", src_path.display(), e))?;
+                .map_err(|e| format!("复制 {} 失败: {}", file_name, e))?;
         }
     }
 
@@ -247,8 +251,9 @@ fn verify_copy(src: &Path, dst: &Path) -> AppResult<()> {
     if !src.exists() {
         return Ok(());
     }
+    let name = crate::utils::sanitize_path_display(src);
     if !dst.exists() {
-        return Err(format!("目标文件不存在: {}", dst.display()).into());
+        return Err(format!("目标文件不存在: {}", name).into());
     }
 
     let src_size = std::fs::metadata(src)
@@ -259,7 +264,7 @@ fn verify_copy(src: &Path, dst: &Path) -> AppResult<()> {
     if src_size != dst_size {
         return Err(format!(
             "文件大小不一致: {} (源: {} 字节, 目标: {} 字节)",
-            src.display(), src_size, dst_size
+            name, src_size, dst_size
         ).into());
     }
 

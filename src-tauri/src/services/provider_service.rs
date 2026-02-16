@@ -23,7 +23,7 @@ impl ProviderService {
 
     fn load_from_file(path: &Path) -> Result<ProviderConfig> {
         let content = std::fs::read_to_string(path)
-            .with_context(|| format!("Failed to read providers config: {}", path.display()))?;
+            .with_context(|| "Failed to read providers config")?;
         let config: ProviderConfig = serde_json::from_str(&content)
             .with_context(|| "Failed to parse providers.json")?;
         Ok(config)
@@ -36,7 +36,7 @@ impl ProviderService {
         let content = serde_json::to_string_pretty(config)
             .with_context(|| "Failed to serialize providers config")?;
         std::fs::write(&self.config_path, content)
-            .with_context(|| format!("Failed to write providers config: {}", self.config_path.display()))?;
+            .with_context(|| "Failed to write providers config")?;
         Ok(())
     }
 

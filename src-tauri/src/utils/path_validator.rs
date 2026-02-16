@@ -95,6 +95,16 @@ pub fn validate_git_url(url: &str) -> Result<(), AppError> {
     Ok(())
 }
 
+/// 脱敏路径，仅保留文件名用于错误消息展示
+///
+/// 避免在面向用户的错误消息中暴露完整的文件系统路径。
+/// 如果无法提取文件名，返回 `"<unknown>"`。
+pub fn sanitize_path_display(path: &Path) -> String {
+    path.file_name()
+        .map(|n| n.to_string_lossy().to_string())
+        .unwrap_or_else(|| "<unknown>".to_string())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -198,5 +208,23 @@ mod tests {
     fn test_worktree_name_rejects_empty() {
         assert!(validate_worktree_name("").is_err());
         assert!(validate_worktree_name("  ").is_err());
+    }
+
+    #[test]
+    fn test_sanitize_path_display_full_path() {
+        let path = Path::new("/home/user/.cc-panes/config.toml");
+        assert_eq!(sanitize_path_display(path), "config.toml");
+    }
+
+    #[test]
+    fn test_sanitize_path_display_windows_path() {
+        let path = Path::new(r"C:\Users\test\.cc-panes\providers.json");
+        assert_eq!(sanitize_path_display(path), "providers.json");
+    }
+
+    #[test]
+    fn test_sanitize_path_display_filename_only() {
+        let path = Path::new("data.db");
+        assert_eq!(sanitize_path_display(path), "data.db");
     }
 }

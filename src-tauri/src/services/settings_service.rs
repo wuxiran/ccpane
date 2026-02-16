@@ -27,7 +27,7 @@ impl SettingsService {
     /// 从文件加载配置
     fn load_from_file(path: &PathBuf) -> Result<AppSettings> {
         let content = std::fs::read_to_string(path)
-            .with_context(|| format!("Failed to read config: {}", path.display()))?;
+            .with_context(|| "Failed to read config")?;
         let settings: AppSettings = toml::from_str(&content)
             .with_context(|| "Failed to parse config.toml")?;
         Ok(settings)
@@ -42,7 +42,7 @@ impl SettingsService {
         let content = toml::to_string_pretty(settings)
             .with_context(|| "Failed to serialize settings")?;
         std::fs::write(&self.config_path, content)
-            .with_context(|| format!("Failed to write config: {}", self.config_path.display()))?;
+            .with_context(|| "Failed to write config")?;
         Ok(())
     }
 
