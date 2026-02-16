@@ -11,11 +11,11 @@ use tauri::{AppHandle, Emitter, State};
 
 /// 获取项目的 Git 分支名
 #[tauri::command]
-pub fn get_git_branch(path: String) -> Option<String> {
-    validate_path(&path).ok()?;
+pub fn get_git_branch(path: String) -> AppResult<Option<String>> {
+    validate_path(&path)?;
     let project_path = Path::new(&path);
     if !project_path.exists() {
-        return None;
+        return Ok(None);
     }
 
     let output = output_with_timeout(
@@ -23,30 +23,29 @@ pub fn get_git_branch(path: String) -> Option<String> {
             .args(["rev-parse", "--abbrev-ref", "HEAD"])
             .current_dir(project_path),
         GIT_LOCAL_TIMEOUT,
-    )
-    .ok()?;
+    )?;
 
     if output.status.success() {
         let branch = String::from_utf8_lossy(&output.stdout)
             .trim()
             .to_string();
         if branch.is_empty() {
-            None
+            Ok(None)
         } else {
-            Some(branch)
+            Ok(Some(branch))
         }
     } else {
-        None
+        Ok(None)
     }
 }
 
 /// 获取项目的 Git 状态（是否有未提交的更改）
 #[tauri::command]
-pub fn get_git_status(path: String) -> Option<bool> {
-    validate_path(&path).ok()?;
+pub fn get_git_status(path: String) -> AppResult<Option<bool>> {
+    validate_path(&path)?;
     let project_path = Path::new(&path);
     if !project_path.exists() {
-        return None;
+        return Ok(None);
     }
 
     let output = output_with_timeout(
@@ -54,14 +53,13 @@ pub fn get_git_status(path: String) -> Option<bool> {
             .args(["status", "--porcelain"])
             .current_dir(project_path),
         GIT_LOCAL_TIMEOUT,
-    )
-    .ok()?;
+    )?;
 
     if output.status.success() {
         let status = String::from_utf8_lossy(&output.stdout);
-        Some(!status.trim().is_empty())
+        Ok(Some(!status.trim().is_empty()))
     } else {
-        None
+        Ok(None)
     }
 }
 
