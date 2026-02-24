@@ -20,5 +20,8 @@
   "searchNext": "下一个 (Enter)",
   "searchClose": "关闭 (Esc)",
   "splitAndMoveRight": "拆分并右移",
-  "splitAndMoveDown": "拆分并下移"
+  "splitAndMoveDown": "拆分并下移",
+  "closeTabsToLeft": "关闭左侧标签",
+  "closeTabsToRight": "关闭右侧标签",
+  "closeOtherTabs": "关闭其他标签"
 }

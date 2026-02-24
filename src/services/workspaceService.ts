@@ -28,10 +28,17 @@ export async function addWorkspaceProject(
   workspaceName: string,
   path: string
 ): Promise<WorkspaceProject> {
-  return invoke<WorkspaceProject>("add_workspace_project", {
+  const project = await invoke<WorkspaceProject>("add_workspace_project", {
     workspaceName,
     path,
   });
+  // 初始化 Local History 监控（幂等）
+  try {
+    await invoke("init_project_history", { projectPath: path });
+  } catch (e) {
+    console.warn("Failed to init project history:", e);
+  }
+  return project;
 }
 
 export async function removeWorkspaceProject(

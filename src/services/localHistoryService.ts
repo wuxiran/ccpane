@@ -17,6 +17,7 @@ export interface HistoryConfig {
   maxAgeDays: number;
   maxFileSize: number;
   maxTotalSize: number;
+  minSaveIntervalSecs: number;
 }
 
 // ============ Diff 类型 ============

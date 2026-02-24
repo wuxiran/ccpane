@@ -6,5 +6,5 @@ pub mod path_validator;
 
 pub use app_paths::AppPaths;
 pub use error::AppResult;
-pub use git_command::{output_with_timeout, GIT_LOCAL_TIMEOUT, GIT_NETWORK_TIMEOUT};
+pub use git_command::{output_with_timeout, GIT_CHECKOUT_TIMEOUT, GIT_LOCAL_TIMEOUT, GIT_NETWORK_TIMEOUT};
 pub use path_validator::{sanitize_path_display, validate_command, validate_git_url, validate_mcp_name, validate_path, validate_relative_path, validate_worktree_name};

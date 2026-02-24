@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { toast } from "sonner";
-import { History, RotateCcw, FileText, Clock, Tag, Trash2, Diff, Code, GitBranch } from "lucide-react";
+import { History, RotateCcw, FileText, Clock, Tag, Trash2, Diff, Code, GitBranch, ChevronLeft, FolderOpen } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -16,8 +16,9 @@ import {
   type FileVersion,
   type DiffResult,
   type HistoryLabel,
+  type RecentChange,
 } from "@/services";
-import { formatRelativeTime, formatFullTime, formatSize } from "@/utils";
+import { formatRelativeTime, formatFullTime, formatSize, getFileName, getDirName, getErrorMessage } from "@/utils";
 
 interface LocalHistoryPanelProps {
   open: boolean;
@@ -27,7 +28,7 @@ interface LocalHistoryPanelProps {
   onRestored?: () => void;
 }
 
-type ViewMode = "diff" | "content" | "deleted";
+type ViewMode = "diff" | "content" | "deleted" | "project-restore";
 
 function getLabelColor(source: string): string {
   const colors: Record<string, string> = {
@@ -59,9 +60,19 @@ export default function LocalHistoryPanel({
   const [labelName, setLabelName] = useState("");
   const [labelTarget, setLabelTarget] = useState<FileVersion | null>(null);
   const [deletedFiles, setDeletedFiles] = useState<FileVersion[]>([]);
+  const [diffDescription, setDiffDescription] = useState("");
+  const [projectLabels, setProjectLabels] = useState<HistoryLabel[]>([]);
+  const [restoring, setRestoring] = useState(false);
   const [labelFilter, setLabelFilter] = useState("");
   const [branchFilter, setBranchFilter] = useState("");
   const [fileBranches, setFileBranches] = useState<string[]>([]);
+
+  // 文件列表模式（两阶段视图）
+  const [internalFilePath, setInternalFilePath] = useState("");
+  const [recentChanges, setRecentChanges] = useState<RecentChange[]>([]);
+  const [fileListLoading, setFileListLoading] = useState(false);
+
+  const effectiveFilePath = filePath || internalFilePath;
 
   const selectRequestIdRef = useRef(0);
 
@@ -74,17 +85,33 @@ export default function LocalHistoryPanel({
       setViewMode("diff");
       setLabelFilter("");
       setBranchFilter("");
-      loadVersions();
+      setInternalFilePath(filePath || "");
+      if (filePath) {
+        loadVersions();
+      } else {
+        loadFileList();
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
+
+  // internalFilePath 变化时加载版本
+  useEffect(() => {
+    if (internalFilePath && open) {
+      setSelectedVersion(null);
+      setVersionContent("");
+      setDiffResult(null);
+      loadVersions();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [internalFilePath]);
 
   // 预计算 versionId -> labels 映射
   const versionLabelsMap = useMemo(() => {
     const map = new Map<string, HistoryLabel[]>();
     for (const label of labels) {
       for (const snap of label.fileSnapshots) {
-        if (snap.filePath === filePath) {
+        if (snap.filePath === effectiveFilePath) {
           const arr = map.get(snap.versionId) || [];
           arr.push(label);
           map.set(snap.versionId, arr);
@@ -92,7 +119,7 @@ export default function LocalHistoryPanel({
       }
     }
     return map;
-  }, [labels, filePath]);
+  }, [labels, effectiveFilePath]);
 
   // 筛选后的版本列表
   const filteredVersions = useMemo(() => {
@@ -102,22 +129,45 @@ export default function LocalHistoryPanel({
       const targetLabel = labels.find((l) => l.id === labelFilter);
       if (targetLabel) {
         const versionIds = new Set(
-          targetLabel.fileSnapshots.filter((s) => s.filePath === filePath).map((s) => s.versionId)
+          targetLabel.fileSnapshots.filter((s) => s.filePath === effectiveFilePath).map((s) => s.versionId)
         );
         result = result.filter((v) => versionIds.has(v.id));
       }
     }
     return result;
-  }, [versions, branchFilter, labelFilter, labels, filePath]);
+  }, [versions, branchFilter, labelFilter, labels, effectiveFilePath]);
+
+  async function loadFileList() {
+    if (!projectPath) return;
+    setFileListLoading(true);
+    try {
+      const changes = await localHistoryService.getRecentChanges(projectPath, 200);
+      // 去重：每个 filePath 只保留最新一条
+      const seen = new Set<string>();
+      const unique: RecentChange[] = [];
+      for (const c of changes) {
+        if (!seen.has(c.filePath)) {
+          seen.add(c.filePath);
+          unique.push(c);
+        }
+      }
+      setRecentChanges(unique);
+    } catch (e) {
+      console.error("Failed to load file list:", e);
+      setRecentChanges([]);
+    } finally {
+      setFileListLoading(false);
+    }
+  }
 
   async function loadVersions() {
-    if (!projectPath || !filePath) return;
+    if (!projectPath || !effectiveFilePath) return;
     setLoading(true);
     try {
       const [vers, lbls, branches] = await Promise.all([
-        localHistoryService.listFileVersions(projectPath, filePath),
+        localHistoryService.listFileVersions(projectPath, effectiveFilePath),
         localHistoryService.listLabels(projectPath),
-        localHistoryService.getFileBranches(projectPath, filePath),
+        localHistoryService.getFileBranches(projectPath, effectiveFilePath),
       ]);
       setVersions([...vers].reverse());
       setLabels(lbls);
@@ -127,6 +177,17 @@ export default function LocalHistoryPanel({
       setVersions([]);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function loadProjectLabels() {
+    if (!projectPath) return;
+    try {
+      const allLabels = await localHistoryService.listLabels(projectPath);
+      setProjectLabels(allLabels.sort((a, b) => b.timestamp.localeCompare(a.timestamp)));
+    } catch (e) {
+      console.error("Failed to load project labels:", e);
+      setProjectLabels([]);
     }
   }
 
@@ -148,12 +209,28 @@ export default function LocalHistoryPanel({
     const requestId = ++selectRequestIdRef.current;
 
     try {
-      if (viewMode === "diff" && filePath) {
-        const result = await localHistoryService.getVersionDiff(projectPath, filePath, version.id);
-        if (requestId !== selectRequestIdRef.current) return;
-        setDiffResult(result);
+      if (viewMode === "diff" && effectiveFilePath) {
+        // versions 数组是 newest-first 排列（.reverse()）
+        const currentIndex = versions.findIndex(v => v.id === version.id);
+        const prevVersion = currentIndex < versions.length - 1 ? versions[currentIndex + 1] : null;
+
+        if (prevVersion) {
+          // 与上一个版本比较（old=前一版本, new=选中版本）
+          setDiffDescription(`${formatRelativeTime(prevVersion.createdAt)} → ${formatRelativeTime(version.createdAt)}`);
+          const result = await localHistoryService.getVersionsDiff(
+            projectPath, effectiveFilePath, prevVersion.id, version.id
+          );
+          if (requestId !== selectRequestIdRef.current) return;
+          setDiffResult(result);
+        } else {
+          // 最早的版本，没有更早版本可比较 → 与当前磁盘文件比较作为 fallback
+          setDiffDescription("最早版本 → 当前文件");
+          const result = await localHistoryService.getVersionDiff(projectPath, effectiveFilePath, version.id);
+          if (requestId !== selectRequestIdRef.current) return;
+          setDiffResult(result);
+        }
       } else {
-        const content = await localHistoryService.getVersionContent(projectPath, filePath || "", version.id);
+        const content = await localHistoryService.getVersionContent(projectPath, effectiveFilePath || "", version.id);
         if (requestId !== selectRequestIdRef.current) return;
         setVersionContent(content);
       }
@@ -162,7 +239,6 @@ export default function LocalHistoryPanel({
       console.error("Failed to load version:", e);
       setVersionContent("加载失败");
     } finally {
-      // 始终重置 loading，避免被取消的请求导致 loading 永远为 true
       setLoadingContent(false);
     }
   }
@@ -170,12 +246,12 @@ export default function LocalHistoryPanel({
   async function restoreVersion() {
     if (!selectedVersion) return;
     try {
-      await localHistoryService.restoreFileVersion(projectPath, filePath || "", selectedVersion.id);
+      await localHistoryService.restoreFileVersion(projectPath, effectiveFilePath || "", selectedVersion.id);
       onRestored?.();
       onOpenChange(false);
     } catch (e) {
       console.error("Failed to restore version:", e);
-      toast.error("恢复失败: " + e);
+      toast.error("恢复失败: " + getErrorMessage(e));
     }
   }
 
@@ -183,6 +259,10 @@ export default function LocalHistoryPanel({
     setViewMode(mode);
     if (mode === "deleted") {
       await loadDeletedFiles();
+      return;
+    }
+    if (mode === "project-restore") {
+      await loadProjectLabels();
       return;
     }
     if (selectedVersion) await selectVersion(selectedVersion);
@@ -203,7 +283,7 @@ export default function LocalHistoryPanel({
         labelType: "manual",
         source: "user",
         timestamp: new Date().toISOString(),
-        fileSnapshots: [{ filePath: filePath || "", versionId: labelTarget.id }],
+        fileSnapshots: [{ filePath: effectiveFilePath || "", versionId: labelTarget.id }],
         branch: labelTarget.branch || "",
       };
       await localHistoryService.putLabel(projectPath, label);
@@ -211,7 +291,7 @@ export default function LocalHistoryPanel({
       setLabelDialogOpen(false);
     } catch (e) {
       console.error("Failed to add label:", e);
-      toast.error("添加标签失败: " + e);
+      toast.error("添加标签失败: " + getErrorMessage(e));
     }
   }
 
@@ -221,7 +301,7 @@ export default function LocalHistoryPanel({
       toast.success(`文件 ${file.filePath} 已恢复`);
       await loadDeletedFiles();
     } catch (e) {
-      toast.error("恢复失败: " + e);
+      toast.error("恢复失败: " + getErrorMessage(e));
     }
   }
 
@@ -250,19 +330,68 @@ export default function LocalHistoryPanel({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-5xl max-h-[85vh]" onKeyDown={handleKeydown}>
+        <DialogContent resizable className="w-[80rem] h-[85vh] max-w-[95vw] max-h-[90vh]" onKeyDown={handleKeydown}>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
+              {!filePath && effectiveFilePath && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 w-7 p-0 mr-1"
+                  onClick={() => { setInternalFilePath(""); loadFileList(); }}
+                >
+                  <ChevronLeft size={16} />
+                </Button>
+              )}
               <History size={18} />
-              文件历史{filePath ? ` - ${filePath}` : ""}
+              文件历史{effectiveFilePath ? ` - ${effectiveFilePath}` : ""}
             </DialogTitle>
           </DialogHeader>
 
-          {!filePath ? (
-            <div className="flex flex-col items-center justify-center py-16 gap-3" style={{ color: "var(--app-text-tertiary)" }}>
-              <FileText size={48} />
-              <p>请从项目右键菜单中打开文件历史</p>
-              <p className="text-xs opacity-70">或在编辑器中选择文件后查看历史</p>
+          {!effectiveFilePath ? (
+            <div className="max-h-[600px] overflow-y-auto">
+              {fileListLoading ? (
+                <div className="flex flex-col items-center justify-center py-16 gap-3" style={{ color: "var(--app-text-tertiary)" }}>
+                  <p>加载文件列表...</p>
+                </div>
+              ) : recentChanges.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-16 gap-3" style={{ color: "var(--app-text-tertiary)" }}>
+                  <FileText size={48} />
+                  <p>暂无文件历史记录</p>
+                  <p className="text-xs opacity-70">项目中的文件变更将自动记录</p>
+                </div>
+              ) : (
+                recentChanges.map((change) => (
+                  <div
+                    key={change.filePath}
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-md cursor-pointer transition-colors hover:bg-[var(--app-hover)]"
+                    onClick={() => setInternalFilePath(change.filePath)}
+                  >
+                    <FolderOpen size={14} className="shrink-0" style={{ color: "var(--app-accent)" }} />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[13px] truncate" style={{ color: "var(--app-text-primary)" }}>
+                        {getFileName(change.filePath)}
+                      </div>
+                      <div className="text-[11px] truncate" style={{ color: "var(--app-text-tertiary)" }}>
+                        {getDirName(change.filePath)}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="text-[11px]" style={{ color: "var(--app-text-tertiary)" }} title={formatFullTime(change.timestamp)}>
+                        {formatRelativeTime(change.timestamp)}
+                      </span>
+                      <span className="text-[11px]" style={{ color: "var(--app-text-tertiary)" }}>
+                        {formatSize(change.size)}
+                      </span>
+                      {change.branch && (
+                        <Badge variant="outline" className="text-[10px] px-1 h-[18px]" style={{ borderColor: "#6366f1", color: "#6366f1" }}>
+                          <GitBranch size={10} className="mr-0.5" />{change.branch}
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           ) : (
             <>
@@ -277,6 +406,9 @@ export default function LocalHistoryPanel({
                   </Button>
                   <Button size="sm" variant={viewMode === "deleted" ? "default" : "ghost"} onClick={() => switchViewMode("deleted")}>
                     <Trash2 size={14} className="mr-1" /> 已删除
+                  </Button>
+                  <Button size="sm" variant={viewMode === "project-restore" ? "default" : "ghost"} onClick={() => switchViewMode("project-restore")}>
+                    <RotateCcw size={14} className="mr-1" /> 项目恢复
                   </Button>
                 </div>
 
@@ -306,9 +438,59 @@ export default function LocalHistoryPanel({
                 </div>
               </div>
 
-              {/* 已删除文件视图 */}
-              {viewMode === "deleted" ? (
-                <div className="max-h-[450px] overflow-y-auto rounded-lg p-2" style={{ border: "1px solid var(--app-border)" }}>
+              {/* 项目恢复视图 */}
+              {viewMode === "project-restore" ? (
+                <div className="h-[600px] overflow-y-auto rounded-lg p-2" style={{ border: "1px solid var(--app-border)" }}>
+                  {projectLabels.length === 0 ? (
+                    <div className="py-5 text-center" style={{ color: "var(--app-text-tertiary)" }}>
+                      暂无快照标签。启动 Claude Code 时会自动创建项目快照。
+                    </div>
+                  ) : (
+                    projectLabels.map((label) => (
+                      <div key={label.id} className="flex items-center justify-between px-3 py-2.5 rounded-md mb-1 transition-colors hover:bg-[var(--app-hover)]">
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          <Badge
+                            variant="outline"
+                            className="text-[10px] px-1.5 h-[18px] shrink-0"
+                            style={{ borderColor: getLabelColor(label.source), color: getLabelColor(label.source) }}
+                          >
+                            {label.source === "claude_session" ? "CC 会话" : label.source === "restore" ? "恢复" : label.source}
+                          </Badge>
+                          <span className="text-[13px] truncate" style={{ color: "var(--app-text-primary)" }}>{label.name}</span>
+                          <span className="text-[11px] shrink-0" style={{ color: "var(--app-text-tertiary)" }} title={formatFullTime(label.timestamp)}>
+                            {formatRelativeTime(label.timestamp)}
+                          </span>
+                          <span className="text-[11px] shrink-0" style={{ color: "var(--app-text-tertiary)" }}>
+                            {label.fileSnapshots.length} 个文件
+                          </span>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={restoring}
+                          onClick={async () => {
+                            if (!confirm(`确定要将项目恢复到「${label.name}」的状态吗？\n\n这将恢复 ${label.fileSnapshots.length} 个文件。恢复前会自动创建当前状态的快照。`)) return;
+                            setRestoring(true);
+                            try {
+                              const restored = await localHistoryService.restoreToLabel(projectPath, label.id);
+                              toast.success(`已恢复 ${restored.length} 个文件`);
+                              onRestored?.();
+                              await loadProjectLabels();
+                            } catch (e) {
+                              toast.error("恢复失败: " + getErrorMessage(e));
+                            } finally {
+                              setRestoring(false);
+                            }
+                          }}
+                        >
+                          <RotateCcw size={12} className="mr-1" /> 恢复到此快照
+                        </Button>
+                      </div>
+                    ))
+                  )}
+                </div>
+              ) : viewMode === "deleted" ? (
+                <div className="max-h-[600px] overflow-y-auto rounded-lg p-2" style={{ border: "1px solid var(--app-border)" }}>
                   {deletedFiles.length === 0 ? (
                     <div className="py-5 text-center" style={{ color: "var(--app-text-tertiary)" }}>暂无已删除的文件</div>
                   ) : (
@@ -331,7 +513,7 @@ export default function LocalHistoryPanel({
                 </div>
               ) : (
                 /* 版本列表 + 预览 */
-                <div className="flex gap-4 h-[450px]">
+                <div className="flex gap-4 h-[600px]">
                   {/* 左侧版本列表 */}
                   <div className="w-[260px] shrink-0 overflow-y-auto rounded-lg p-2" style={{ border: "1px solid var(--app-border)" }}>
                     {loading ? (
@@ -396,7 +578,16 @@ export default function LocalHistoryPanel({
                         加载中...
                       </div>
                     ) : viewMode === "diff" ? (
-                      <DiffView diff={diffResult} />
+                      <div className="flex-1 flex flex-col overflow-hidden">
+                        {diffDescription && (
+                          <div className="px-3 py-1.5 text-[11px] flex items-center gap-2 border-b shrink-0"
+                               style={{ color: "var(--app-text-tertiary)", borderColor: "var(--app-border)" }}>
+                            <Diff size={12} />
+                            <span>{diffDescription}</span>
+                          </div>
+                        )}
+                        <DiffView diff={diffResult} />
+                      </div>
                     ) : (
                       <pre className="flex-1 m-0 p-3 overflow-auto text-xs leading-relaxed whitespace-pre-wrap break-all" style={{ background: "var(--app-content)" }}>
                         {versionContent}
@@ -407,7 +598,7 @@ export default function LocalHistoryPanel({
               )}
 
               {/* 操作按钮 */}
-              {selectedVersion && viewMode !== "deleted" && (
+              {selectedVersion && viewMode !== "deleted" && viewMode !== "project-restore" && (
                 <div className="flex justify-between items-center mt-4">
                   <Button variant="outline" size="sm" onClick={() => openLabelDialog(selectedVersion)}>
                     <Tag size={14} className="mr-1" /> 添加标签

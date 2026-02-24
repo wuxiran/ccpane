@@ -40,7 +40,7 @@ fn test_save_and_list_versions() {
     // 保存版本
     let repo = HistoryFileRepository::open(&project_path).unwrap();
     let v1 = repo
-        .save_version("src/main.rs", b"fn main() {}", false, "main")
+        .save_version("src/main.rs", b"fn main() {}", false, "main", 0)
         .unwrap()
         .unwrap();
     let v2 = repo
@@ -49,6 +49,7 @@ fn test_save_and_list_versions() {
             b"fn main() { println!(\"hello\"); }",
             false,
             "main",
+            0,
         )
         .unwrap()
         .unwrap();
@@ -82,18 +83,18 @@ fn test_version_content_dedup() {
 
     // 同内容同分支 - 应去重返回 None
     let v1 = repo
-        .save_version("f.txt", b"hello", false, "main")
+        .save_version("f.txt", b"hello", false, "main", 0)
         .unwrap();
     assert!(v1.is_some());
 
     let v2 = repo
-        .save_version("f.txt", b"hello", false, "main")
+        .save_version("f.txt", b"hello", false, "main", 0)
         .unwrap();
     assert!(v2.is_none()); // 去重
 
     // 不同内容 - 应保存
     let v3 = repo
-        .save_version("f.txt", b"world", false, "main")
+        .save_version("f.txt", b"world", false, "main", 0)
         .unwrap();
     assert!(v3.is_some());
 
@@ -109,11 +110,11 @@ fn test_diff_between_versions() {
 
     let repo = HistoryFileRepository::open(&project_path).unwrap();
     let v1 = repo
-        .save_version("a.txt", b"line1\nline2\nline3\n", false, "main")
+        .save_version("a.txt", b"line1\nline2\nline3\n", false, "main", 0)
         .unwrap()
         .unwrap();
     let v2 = repo
-        .save_version("a.txt", b"line1\nmodified\nline3\n", false, "main")
+        .save_version("a.txt", b"line1\nmodified\nline3\n", false, "main", 0)
         .unwrap()
         .unwrap();
     drop(repo);
@@ -138,7 +139,7 @@ fn test_diff_with_current_file() {
 
     let repo = HistoryFileRepository::open(&project_path).unwrap();
     let v = repo
-        .save_version("test.txt", b"old content\n", false, "main")
+        .save_version("test.txt", b"old content\n", false, "main", 0)
         .unwrap()
         .unwrap();
     drop(repo);
@@ -163,7 +164,7 @@ fn test_label_crud_flow() {
     // 先保存一些版本
     let repo = HistoryFileRepository::open(&project_path).unwrap();
     let v = repo
-        .save_version("src/lib.rs", b"pub fn hello() {}", false, "main")
+        .save_version("src/lib.rs", b"pub fn hello() {}", false, "main", 0)
         .unwrap()
         .unwrap();
     drop(repo);
@@ -207,9 +208,9 @@ fn test_create_auto_label() {
 
     // 保存版本以创建快照
     let repo = HistoryFileRepository::open(&project_path).unwrap();
-    repo.save_version("file.rs", b"content-a", false, "main")
+    repo.save_version("file.rs", b"content-a", false, "main", 0)
         .unwrap();
-    repo.save_version("util.rs", b"content-b", false, "main")
+    repo.save_version("util.rs", b"content-b", false, "main", 0)
         .unwrap();
     drop(repo);
 
@@ -242,6 +243,7 @@ fn test_cleanup_old_versions() {
             format!("version {}", i).as_bytes(),
             false,
             "main",
+            0,
         )
         .unwrap();
     }
@@ -284,13 +286,13 @@ fn test_branch_aware_versions() {
     let (_dir, project_path, service) = setup();
 
     let repo = HistoryFileRepository::open(&project_path).unwrap();
-    repo.save_version("shared.rs", b"main-v1", false, "main")
+    repo.save_version("shared.rs", b"main-v1", false, "main", 0)
         .unwrap();
-    repo.save_version("shared.rs", b"feat-v1", false, "feature-x")
+    repo.save_version("shared.rs", b"feat-v1", false, "feature-x", 0)
         .unwrap();
-    repo.save_version("shared.rs", b"feat-v2", false, "feature-x")
+    repo.save_version("shared.rs", b"feat-v2", false, "feature-x", 0)
         .unwrap();
-    repo.save_version("shared.rs", b"main-v2", false, "main")
+    repo.save_version("shared.rs", b"main-v2", false, "main", 0)
         .unwrap();
     drop(repo);
 
@@ -339,13 +341,13 @@ fn test_recent_changes_across_files() {
     let (_dir, project_path, service) = setup();
 
     let repo = HistoryFileRepository::open(&project_path).unwrap();
-    repo.save_version("first.rs", b"first", false, "main")
+    repo.save_version("first.rs", b"first", false, "main", 0)
         .unwrap();
-    repo.save_version("second.rs", b"second", false, "main")
+    repo.save_version("second.rs", b"second", false, "main", 0)
         .unwrap();
-    repo.save_version("third.rs", b"third", false, "main")
+    repo.save_version("third.rs", b"third", false, "main", 0)
         .unwrap();
-    repo.save_version("fourth.rs", b"fourth", false, "main")
+    repo.save_version("fourth.rs", b"fourth", false, "main", 0)
         .unwrap();
     drop(repo);
 
@@ -376,13 +378,13 @@ fn test_directory_changes() {
     let (_dir, project_path, service) = setup();
 
     let repo = HistoryFileRepository::open(&project_path).unwrap();
-    repo.save_version("src/a.rs", b"a", false, "main")
+    repo.save_version("src/a.rs", b"a", false, "main", 0)
         .unwrap();
-    repo.save_version("src/b.rs", b"b", false, "main")
+    repo.save_version("src/b.rs", b"b", false, "main", 0)
         .unwrap();
-    repo.save_version("src/deep/c.rs", b"c", false, "main")
+    repo.save_version("src/deep/c.rs", b"c", false, "main", 0)
         .unwrap();
-    repo.save_version("tests/t.rs", b"t", false, "main")
+    repo.save_version("tests/t.rs", b"t", false, "main", 0)
         .unwrap();
     drop(repo);
 
@@ -406,13 +408,13 @@ fn test_deleted_files_tracking() {
 
     let repo = HistoryFileRepository::open(&project_path).unwrap();
     // 保存正常版本
-    repo.save_version("removed.rs", b"content", false, "main")
+    repo.save_version("removed.rs", b"content", false, "main", 0)
         .unwrap();
     // 标记为已删除
-    repo.save_version("removed.rs", b"content", true, "main")
+    repo.save_version("removed.rs", b"content", true, "main", 0)
         .unwrap();
     // 另一个未删除的文件
-    repo.save_version("alive.rs", b"alive", false, "main")
+    repo.save_version("alive.rs", b"alive", false, "main", 0)
         .unwrap();
     drop(repo);
 
@@ -430,7 +432,7 @@ fn test_restore_version_to_filesystem() {
 
     let repo = HistoryFileRepository::open(&project_path).unwrap();
     let v = repo
-        .save_version("restore-me.txt", b"original content", false, "main")
+        .save_version("restore-me.txt", b"original content", false, "main", 0)
         .unwrap()
         .unwrap();
     drop(repo);
@@ -462,7 +464,7 @@ fn test_compress_and_read_back() {
 
     let repo = HistoryFileRepository::open(&project_path).unwrap();
     let v = repo
-        .save_version("big.txt", &large_content, false, "main")
+        .save_version("big.txt", &large_content, false, "main", 0)
         .unwrap()
         .unwrap();
     drop(repo);

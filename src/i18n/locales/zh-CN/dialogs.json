@@ -72,6 +72,7 @@
   "branchNamePlaceholder": "分支名（可选）",
   "creating": "创建中...",
   "existingWorktrees": "现有 Worktree",
+  "noWorktrees": "暂无 Worktree",
   "cannotDeleteMain": "不能删除主工作目录",
   "confirmDeleteWorktree": "确定要删除 Worktree \"{{path}}\" 吗？",
   "createWorktreeFailed": "创建 Worktree 失败: {{error}}",

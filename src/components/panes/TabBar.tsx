@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, memo } from "react";
+import { useState, useRef, useCallback, useEffect, memo } from "react";
 import { X, Plus, PanelRight, PanelBottom, Pin, Pencil } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import {
@@ -26,6 +26,9 @@ interface TabBarProps {
   onRename: (tabId: string, newTitle: string) => void;
   onSplitAndMoveRight: (tabId: string) => void;
   onSplitAndMoveDown: (tabId: string) => void;
+  onCloseTabsToLeft: (tabId: string) => void;
+  onCloseTabsToRight: (tabId: string) => void;
+  onCloseOtherTabs: (tabId: string) => void;
 }
 
 export default memo(function TabBar({
@@ -42,6 +45,9 @@ export default memo(function TabBar({
   onRename,
   onSplitAndMoveRight,
   onSplitAndMoveDown,
+  onCloseTabsToLeft,
+  onCloseTabsToRight,
+  onCloseOtherTabs,
 }: TabBarProps) {
   const { t } = useTranslation("panes");
   const getStatus = useTerminalStatusStore((s) => s.getStatus);
@@ -86,11 +92,18 @@ export default memo(function TabBar({
   const startRename = useCallback((tab: Tab) => {
     setEditingTabId(tab.id);
     setEditingTitle(tab.title);
-    requestAnimationFrame(() => {
-      editInputRef.current?.focus();
-      editInputRef.current?.select();
-    });
   }, []);
+
+  // Radix ContextMenu 关闭时焦点恢复在 rAF 之后，用 setTimeout 延迟聚焦避免抢占
+  useEffect(() => {
+    if (editingTabId) {
+      const timer = setTimeout(() => {
+        editInputRef.current?.focus();
+        editInputRef.current?.select();
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [editingTabId]);
 
   function confirmRename() {
     if (editingTabId && editingTitle.trim()) {
@@ -105,22 +118,34 @@ export default memo(function TabBar({
     setEditingTitle("");
   }
 
+  // 根据标签数量自动选择紧凑级别
+  type Density = 'normal' | 'compact' | 'dense';
+  const density: Density = tabs.length <= 3 ? 'normal' : tabs.length <= 6 ? 'compact' : 'dense';
+
+  const DENSITY = {
+    normal:  { bar: 'h-11 px-4', tabList: 'gap-2 pt-1.5', tab: 'gap-2.5 px-4 h-9 rounded-t-lg text-sm', title: 'max-w-[120px]', statusSize: 6, pinSize: 12, closeBtn: 'w-3 h-3', addBtn: 'p-2', addIcon: 'w-4 h-4' },
+    compact: { bar: 'h-9 px-3',  tabList: 'gap-1 pt-1',   tab: 'gap-1.5 px-2.5 h-7 rounded-t-md text-xs', title: 'max-w-[100px]', statusSize: 5, pinSize: 10, closeBtn: 'w-2.5 h-2.5', addBtn: 'p-1.5', addIcon: 'w-3.5 h-3.5' },
+    dense:   { bar: 'h-8 px-2',  tabList: 'gap-0.5 pt-0.5', tab: 'gap-1 px-2 h-6 rounded-t text-[11px]',   title: 'max-w-[80px]',  statusSize: 4, pinSize: 10, closeBtn: 'w-2.5 h-2.5', addBtn: 'p-1', addIcon: 'w-3 h-3' },
+  } as const;
+
+  const d = DENSITY[density];
+
   return (
     <div
-      className={`flex items-center h-11 px-4 shrink-0 border-b backdrop-blur-xl transition-colors ${
+      className={`flex items-center ${d.bar} shrink-0 border-b backdrop-blur-xl transition-colors ${
         isDark
           ? 'bg-[#0F1117]/30 border-white/5'
           : 'bg-white/30 border-white/30'
       }`}
     >
       <div
-        className="flex items-center gap-2 overflow-x-auto flex-1 h-full pt-1.5"
+        className={`flex items-center ${d.tabList} overflow-x-auto flex-1 h-full`}
       >
         {tabs.map((tab, index) => (
           <ContextMenu key={tab.id}>
             <ContextMenuTrigger asChild>
               <div
-                className={`relative group flex items-center gap-2.5 px-4 h-9 rounded-t-lg text-sm font-medium transition-all cursor-pointer border-t border-x backdrop-blur-lg ${
+                className={`relative group flex items-center ${d.tab} font-medium transition-all cursor-pointer border-t border-x backdrop-blur-lg ${
                   tab.id === activeId
                     ? isDark
                       ? 'bg-[#0F1117]/60 border-white/5 text-blue-300'
@@ -145,16 +170,16 @@ export default memo(function TabBar({
                 {tab.id === activeId && (
                   <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-blue-400 to-transparent opacity-60" />
                 )}
-                <StatusIndicator status={getStatus(tab.sessionId)} size={6} />
+                <StatusIndicator status={getStatus(tab.sessionId)} size={d.statusSize} />
                 {tab.pinned && (
-                  <Pin size={12} className="shrink-0 opacity-60 rotate-45" style={{ color: "var(--app-accent)" }} />
+                  <Pin size={d.pinSize} className="shrink-0 opacity-60 rotate-45" style={{ color: "var(--app-accent)" }} onDoubleClick={(e) => e.stopPropagation()} />
                 )}
                 {editingTabId === tab.id ? (
                   <input
                     ref={editInputRef}
                     value={editingTitle}
                     onChange={(e) => setEditingTitle(e.target.value)}
-                    className="max-w-[120px] text-xs font-medium rounded px-1 py-0.5 outline-none"
+                    className={`${d.title} text-xs font-medium rounded px-1 py-0.5 outline-none`}
                     style={{
                       background: "var(--app-content)",
                       border: "1px solid var(--app-accent)",
@@ -169,7 +194,7 @@ export default memo(function TabBar({
                   />
                 ) : (
                   <span
-                    className="max-w-[120px] truncate"
+                    className={`${d.title} truncate`}
                     onDoubleClick={(e) => {
                       e.stopPropagation();
                       startRename(tab);
@@ -186,7 +211,7 @@ export default memo(function TabBar({
                       onClose(tab.id);
                     }}
                   >
-                    <X className="w-3 h-3" />
+                    <X className={d.closeBtn} />
                   </button>
                 )}
               </div>
@@ -215,6 +240,29 @@ export default memo(function TabBar({
                   </ContextMenuItem>
                 </>
               )}
+              {tabs.length > 1 && (
+                <>
+                  <ContextMenuSeparator />
+                  <ContextMenuItem
+                    disabled={tabs.slice(0, index).filter((t) => !t.pinned).length === 0}
+                    onClick={() => onCloseTabsToLeft(tab.id)}
+                  >
+                    {t("closeTabsToLeft")}
+                  </ContextMenuItem>
+                  <ContextMenuItem
+                    disabled={tabs.slice(index + 1).filter((t) => !t.pinned).length === 0}
+                    onClick={() => onCloseTabsToRight(tab.id)}
+                  >
+                    {t("closeTabsToRight")}
+                  </ContextMenuItem>
+                  <ContextMenuItem
+                    disabled={tabs.filter((_, i) => i !== index && !tabs[i].pinned).length === 0}
+                    onClick={() => onCloseOtherTabs(tab.id)}
+                  >
+                    {t("closeOtherTabs")}
+                  </ContextMenuItem>
+                </>
+              )}
               {!tab.pinned && (
                 <>
                   <ContextMenuSeparator />
@@ -227,14 +275,14 @@ export default memo(function TabBar({
           </ContextMenu>
         ))}
         <button
-          className={`p-2 mb-1 rounded-lg transition-colors ${
+          className={`${d.addBtn} mb-1 rounded-lg transition-colors ${
             isDark
               ? 'text-slate-400 hover:bg-white/10 hover:text-slate-200'
               : 'text-slate-500 hover:bg-white/40 hover:text-slate-800'
           }`}
           onClick={onAdd}
         >
-          <Plus className="w-4 h-4" />
+          <Plus className={d.addIcon} />
         </button>
       </div>
     </div>

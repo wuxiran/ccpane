@@ -322,29 +322,41 @@ impl HistoryFileRepository {
     // ============ 版本管理 ============
 
     /// 保存文件版本
+    /// `min_interval_secs`: 同一文件同分支的最小保存间隔（秒），0 表示不限制
     pub fn save_version(
         &self,
         file_path: &str,
         content: &[u8],
         is_deleted: bool,
         branch: &str,
+        min_interval_secs: u64,
     ) -> Result<Option<FileVersion>> {
         let hash = Self::calculate_hash(content);
 
-        // 检查是否与同分支的最新版本相同（去重）
+        // 检查是否与同分支的最新版本相同（去重）+ 时间间隔检查
         // 注意：is_deleted 标记的版本不做去重，即使内容相同也要记录
         if !is_deleted {
             let db = self.db.lock().unwrap_or_else(|e| e.into_inner());
-            let latest_hash: Option<String> = db
+            let latest: Option<(String, String)> = db
                 .query_row(
-                    "SELECT hash FROM file_versions WHERE file_path = ?1 AND branch = ?2 ORDER BY id DESC LIMIT 1",
+                    "SELECT hash, created_at FROM file_versions WHERE file_path = ?1 AND branch = ?2 ORDER BY id DESC LIMIT 1",
                     params![file_path, branch],
-                    |row| row.get(0),
+                    |row| Ok((row.get(0)?, row.get(1)?)),
                 )
                 .ok();
-            if let Some(ref lh) = latest_hash {
-                if lh == &hash {
+            if let Some((ref latest_hash, ref latest_time)) = latest {
+                // 1. hash 相同 → 跳过
+                if latest_hash == &hash {
                     return Ok(None);
+                }
+                // 2. 时间间隔不足 → 跳过
+                if min_interval_secs > 0 {
+                    if let Ok(last_dt) = chrono::DateTime::parse_from_rfc3339(latest_time) {
+                        let elapsed = chrono::Utc::now().signed_duration_since(last_dt);
+                        if elapsed.num_seconds() < min_interval_secs as i64 {
+                            return Ok(None);
+                        }
+                    }
                 }
             }
         }

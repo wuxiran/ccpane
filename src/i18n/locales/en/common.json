@@ -35,5 +35,6 @@
   "splitRight": "Split Right",
   "splitDown": "Split Down",
   "exitBorderless": "Exit Borderless",
-  "switchLanguage": "Switch Language"
+  "switchLanguage": "Switch Language",
+  "confirmAction": "Confirm Action"
 }

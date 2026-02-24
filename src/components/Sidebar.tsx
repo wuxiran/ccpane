@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useWorkspacesStore, useProvidersStore, useThemeStore } from "@/stores";
-import { historyService, type LaunchRecord } from "@/services";
+import { historyService, localHistoryService, type LaunchRecord } from "@/services";
 import { waitForTauri } from "@/utils";
 import WorkspaceTree from "@/components/sidebar/WorkspaceTree";
 import RecentLaunches from "@/components/sidebar/RecentLaunches";
@@ -125,11 +125,18 @@ export default function Sidebar({
   }
 
   useEffect(() => {
-    waitForTauri().then((ready) => {
+    waitForTauri().then(async (ready) => {
       if (!ready) return;
-      loadWorkspaces();
+      await loadWorkspaces();
       fetchHistory();
       loadProviders();
+      // 应用启动时为所有工作空间项目恢复 history watcher（幂等）
+      const allWorkspaces = useWorkspacesStore.getState().workspaces;
+      for (const ws of allWorkspaces) {
+        for (const project of ws.projects) {
+          localHistoryService.initProjectHistory(project.path).catch(console.error);
+        }
+      }
     });
   }, [loadWorkspaces, fetchHistory, loadProviders]);
 

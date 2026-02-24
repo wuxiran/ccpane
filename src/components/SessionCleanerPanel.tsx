@@ -78,7 +78,7 @@ export default function SessionCleanerPanel({ open, onOpenChange, projectPath }:
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[80vh]">
+      <DialogContent resizable className="w-[48rem] h-[80vh] max-w-[95vw] max-h-[90vh]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <ShieldCheck size={18} />

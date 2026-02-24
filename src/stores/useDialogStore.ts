@@ -15,7 +15,8 @@ interface DialogState {
   // Local History
   localHistoryOpen: boolean;
   localHistoryProjectPath: string;
-  openLocalHistory: (projectPath: string) => void;
+  localHistoryFilePath: string;
+  openLocalHistory: (projectPath: string, filePath?: string) => void;
   closeLocalHistory: () => void;
 
   // Session Cleaner
@@ -40,8 +41,10 @@ export const useDialogStore = create<DialogState>((set) => ({
   // Local History
   localHistoryOpen: false,
   localHistoryProjectPath: "",
-  openLocalHistory: (projectPath) => set({ localHistoryOpen: true, localHistoryProjectPath: projectPath }),
-  closeLocalHistory: () => set({ localHistoryOpen: false }),
+  localHistoryFilePath: "",
+  openLocalHistory: (projectPath, filePath) =>
+    set({ localHistoryOpen: true, localHistoryProjectPath: projectPath, localHistoryFilePath: filePath || "" }),
+  closeLocalHistory: () => set({ localHistoryOpen: false, localHistoryFilePath: "" }),
 
   // Session Cleaner
   sessionCleanerOpen: false,

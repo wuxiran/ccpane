@@ -42,6 +42,9 @@ pub struct HistoryConfig {
     /// 项目级总存储空间限制（字节）
     #[serde(default = "default_max_total_size")]
     pub max_total_size: u64,
+    /// 同一文件同一分支的最小保存间隔（秒），默认 300 秒（5 分钟）
+    #[serde(default = "default_min_save_interval_secs")]
+    pub min_save_interval_secs: u64,
 }
 
 fn default_max_file_size() -> u64 {
@@ -50,6 +53,10 @@ fn default_max_file_size() -> u64 {
 
 fn default_max_total_size() -> u64 {
     500 * 1024 * 1024 // 500MB
+}
+
+fn default_min_save_interval_secs() -> u64 {
+    300 // 5 分钟
 }
 
 impl Default for HistoryConfig {
@@ -70,6 +77,7 @@ impl Default for HistoryConfig {
             max_age_days: 30,
             max_file_size: default_max_file_size(),
             max_total_size: default_max_total_size(),
+            min_save_interval_secs: default_min_save_interval_secs(),
         }
     }
 }

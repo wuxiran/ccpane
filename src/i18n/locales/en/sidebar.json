@@ -34,6 +34,12 @@
   "pinFailed": "Failed to update pin status: {{error}}",
   "hideFailed": "Failed to update hidden status: {{error}}",
   "reorderFailed": "Failed to reorder: {{error}}",
+  "openClaudeCode": "Open Claude Code",
+  "openFolder": "Open Folder",
+  "copyPath": "Copy Path",
+  "absolutePath": "Absolute Path",
+  "relativePath": "Relative Path",
+  "worktreeManager": "Worktree Manager",
   "openHere": "Open in this directory",
   "deleteWorkspaceTitle": "Delete Workspace",
   "deleteWorkspaceConfirm": "Are you sure you want to delete workspace \"{{name}}\"? This action cannot be undone.",
@@ -44,5 +50,9 @@
   "systemReady": "System Ready",
   "noLaunchRecords": "No launch records",
   "importHint": "Click \"Import Project\" in a workspace",
-  "newHint": "Create a workspace first, then import projects"
+  "newHint": "Create a workspace first, then import projects",
+  "setWorkspacePath": "Set Workspace Path",
+  "clearWorkspacePath": "Clear Workspace Path",
+  "renameWorkspace": "Rename",
+  "selectProjectFirst": "Please select a project first"
 }

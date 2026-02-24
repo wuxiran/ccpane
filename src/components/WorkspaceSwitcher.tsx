@@ -1,6 +1,7 @@
 import { useState, useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import { getErrorMessage } from "@/utils";
 import {
   ChevronDown, ChevronRight, Pin, PinOff,
   Eye, EyeOff, GripVertical, MoreHorizontal,
@@ -303,7 +304,7 @@ export default function WorkspaceSwitcher({ onExpandSidebar }: WorkspaceSwitcher
   const handleTogglePin = useCallback(
     (ws: Workspace) => {
       updatePinned(ws.name, !ws.pinned).catch((e) => {
-        toast.error(t("pinFailed", { error: String(e) }));
+        toast.error(t("pinFailed", { error: getErrorMessage(e) }));
       });
     },
     [updatePinned]
@@ -312,7 +313,7 @@ export default function WorkspaceSwitcher({ onExpandSidebar }: WorkspaceSwitcher
   const handleToggleHidden = useCallback(
     (ws: Workspace) => {
       updateHidden(ws.name, !ws.hidden).catch((e) => {
-        toast.error(t("hideFailed", { error: String(e) }));
+        toast.error(t("hideFailed", { error: getErrorMessage(e) }));
       });
     },
     [updateHidden]
@@ -335,7 +336,7 @@ export default function WorkspaceSwitcher({ onExpandSidebar }: WorkspaceSwitcher
         ...hidden.map((ws) => ws.name),
       ];
       reorder(allNames).catch((e) => {
-        toast.error(t("reorderFailed", { error: String(e) }));
+        toast.error(t("reorderFailed", { error: getErrorMessage(e) }));
       });
     },
     [pinned, unpinnedVisible, hidden, reorder]

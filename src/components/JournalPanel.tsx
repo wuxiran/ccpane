@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
+import { getErrorMessage } from "@/utils";
 import { BookOpen, Save, FileText } from "lucide-react";
 import {
   Dialog,
@@ -64,7 +65,7 @@ export default function JournalPanel({ open, onOpenChange, workspaceName, onSave
       onSaved?.();
     } catch (e) {
       console.error("Failed to save session:", e);
-      toast.error("保存失败: " + e);
+      toast.error("保存失败: " + getErrorMessage(e));
     } finally {
       setSaving(false);
     }
@@ -72,7 +73,7 @@ export default function JournalPanel({ open, onOpenChange, workspaceName, onSave
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[80vh]">
+      <DialogContent resizable className="w-[56rem] h-[80vh] max-w-[95vw] max-h-[90vh]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <BookOpen size={18} />

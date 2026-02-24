@@ -20,5 +20,8 @@
   "searchNext": "Next (Enter)",
   "searchClose": "Close (Esc)",
   "splitAndMoveRight": "Split & Move Right",
-  "splitAndMoveDown": "Split & Move Down"
+  "splitAndMoveDown": "Split & Move Down",
+  "closeTabsToLeft": "Close Tabs to the Left",
+  "closeTabsToRight": "Close Tabs to the Right",
+  "closeOtherTabs": "Close Other Tabs"
 }

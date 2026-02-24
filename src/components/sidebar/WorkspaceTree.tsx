@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import { openPath } from "@tauri-apps/plugin-opener";
@@ -23,6 +24,7 @@ import { worktreeService, type WorktreeInfo } from "@/services";
 import { scanDirectory, type ScannedRepo } from "@/services/workspaceService";
 import ScanImportDialog from "@/components/ScanImportDialog";
 import GitCloneDialog from "@/components/GitCloneDialog";
+import WorktreeManager from "@/components/WorktreeManager";
 import { getProjectName } from "@/utils";
 import type { Workspace, WorkspaceProject } from "@/types";
 
@@ -33,6 +35,7 @@ interface WorkspaceTreeProps {
 export default function WorkspaceTree({
   onOpenTerminal,
 }: WorkspaceTreeProps) {
+  const { t } = useTranslation(["sidebar", "dialogs", "common"]);
   const onOpenJournal = useDialogStore((s) => s.openJournal);
   const onOpenHistory = useDialogStore((s) => s.openLocalHistory);
   const onOpenSessionCleaner = useDialogStore((s) => s.openSessionCleaner);
@@ -88,6 +91,11 @@ export default function WorkspaceTree({
   // Git Clone
   const [gitCloneOpen, setGitCloneOpen] = useState(false);
   const [gitCloneTargetWorkspace, setGitCloneTargetWorkspace] = useState<string>("");
+
+  // Worktree Manager
+  const [worktreeManagerOpen, setWorktreeManagerOpen] = useState(false);
+  const [worktreeManagerProjectPath, setWorktreeManagerProjectPath] = useState("");
+  const [worktreeManagerWs, setWorktreeManagerWs] = useState<Workspace | undefined>();
 
   // Git 分支
   const fetchGitBranch = useCallback(async (path: string): Promise<string | null> => {
@@ -356,8 +364,14 @@ export default function WorkspaceTree({
     }
   }
 
-  function handleOpenWorktree(path: string) {
-    onOpenTerminal(path);
+  function handleOpenWorktree(path: string, ws?: Workspace) {
+    onOpenTerminal(path, ws?.name, ws?.providerId, ws?.path);
+  }
+
+  function handleOpenWorktreeManager(project: WorkspaceProject, ws?: Workspace) {
+    setWorktreeManagerProjectPath(project.path);
+    setWorktreeManagerWs(ws);
+    setWorktreeManagerOpen(true);
   }
 
   async function handleRevealFolder(path: string) {
@@ -394,7 +408,7 @@ export default function WorkspaceTree({
     <>
       {/* Section: 工作空间 */}
       <div className="flex items-center justify-between px-3 py-3 mt-1 mb-1">
-        <span className={`text-[11px] font-bold uppercase tracking-wider ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>工作空间</span>
+        <span className={`text-[11px] font-bold uppercase tracking-wider ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{t("workspaces")}</span>
       </div>
 
       <div className="flex flex-col gap-1">
@@ -436,36 +450,36 @@ export default function WorkspaceTree({
               </ContextMenuTrigger>
               <ContextMenuContent className="w-40">
                 <ContextMenuItem disabled={ws.projects.length === 0} onClick={() => handleOpenWorkspace(ws)}>
-                  <Terminal size={14} className="mr-2" /> 打开终端
+                  <Terminal size={14} className="mr-2" /> {t("openTerminal")}
                 </ContextMenuItem>
                 <ContextMenuItem disabled={ws.projects.length === 0} onClick={() => handleOpenClaudeWorkspace(ws)}>
-                  <Terminal size={14} className="mr-2" /> 打开 Claude Code
+                  <Terminal size={14} className="mr-2" /> {t("openClaudeCode")}
                 </ContextMenuItem>
                 <ContextMenuItem
                   disabled={!ws.path && ws.projects.length === 0}
                   onClick={() => handleRevealFolder(ws.path || ws.projects[0]?.path)}
                 >
-                  <FolderOpen size={14} className="mr-2" /> 打开文件夹
+                  <FolderOpen size={14} className="mr-2" /> {t("openFolder")}
                 </ContextMenuItem>
                 <ContextMenuSub>
                   <ContextMenuSubTrigger disabled={!ws.path && ws.projects.length === 0}>
-                    <Copy size={14} className="mr-2" /> 复制路径
+                    <Copy size={14} className="mr-2" /> {t("copyPath")}
                   </ContextMenuSubTrigger>
                   <ContextMenuSubContent>
                     <ContextMenuItem onClick={() => handleCopyPath(ws.path || ws.projects[0]?.path)}>
-                      绝对路径
+                      {t("absolutePath")}
                     </ContextMenuItem>
                     <ContextMenuItem onClick={() => handleCopyPath(getRelativePath(ws.path || ws.projects[0]?.path))}>
-                      相对路径
+                      {t("relativePath")}
                     </ContextMenuItem>
                   </ContextMenuSubContent>
                 </ContextMenuSub>
                 <ContextMenuSeparator />
                 <ContextMenuItem onClick={() => onOpenJournal(ws.name)}>
-                  <FileText size={14} className="mr-2" /> 会话日志
+                  <FileText size={14} className="mr-2" /> {t("sessionJournal")}
                 </ContextMenuItem>
                 <ContextMenuItem onClick={() => onOpenSessionCleaner(ws.name)}>
-                  <ShieldCheck size={14} className="mr-2" /> 会话修复
+                  <ShieldCheck size={14} className="mr-2" /> {t("sessionCleaner")}
                 </ContextMenuItem>
                 <ContextMenuSub>
                   <ContextMenuSubTrigger>
@@ -474,7 +488,7 @@ export default function WorkspaceTree({
                   <ContextMenuSubContent className="w-44">
                     <ContextMenuItem onClick={() => handleSetWorkspaceProvider(ws, null)}>
                       {!ws.providerId ? <Check size={14} className="mr-2" /> : <span className="mr-2 w-[14px]" />}
-                      不指定（继承系统）
+                      {t("noProvider")}
                     </ContextMenuItem>
                     {providerList.length > 0 && <ContextMenuSeparator />}
                     {providerList.map((p) => (
@@ -487,30 +501,30 @@ export default function WorkspaceTree({
                 </ContextMenuSub>
                 <ContextMenuSeparator />
                 <ContextMenuItem onClick={() => handleSetWorkspacePath(ws)}>
-                  <FolderRoot size={14} className="mr-2" /> 设置工作空间路径
+                  <FolderRoot size={14} className="mr-2" /> {t("setWorkspacePath")}
                 </ContextMenuItem>
                 {ws.path && (
                   <ContextMenuItem onClick={() => handleClearWorkspacePath(ws)}>
-                    <X size={14} className="mr-2" /> 清除工作空间路径
+                    <X size={14} className="mr-2" /> {t("clearWorkspacePath")}
                   </ContextMenuItem>
                 )}
                 <ContextMenuSeparator />
                 <ContextMenuItem onClick={() => handleScanImport(ws)}>
-                  <FolderSearch size={14} className="mr-2" /> 从目录导入
+                  <FolderSearch size={14} className="mr-2" /> {t("importFromDir")}
                 </ContextMenuItem>
                 <ContextMenuItem onClick={() => handleGitClone(ws)}>
-                  <GitBranch size={14} className="mr-2" /> 从 Git 克隆
+                  <GitBranch size={14} className="mr-2" /> {t("cloneFromGit")}
                 </ContextMenuItem>
                 <ContextMenuSeparator />
                 <ContextMenuItem onClick={() => handleSetWorkspaceAlias(ws)}>
-                  <Pencil size={14} className="mr-2" /> 设置别名
+                  <Pencil size={14} className="mr-2" /> {t("setAlias")}
                 </ContextMenuItem>
                 <ContextMenuItem onClick={() => handleRenameWorkspace(ws)}>
-                  <Pencil size={14} className="mr-2" /> 重命名
+                  <Pencil size={14} className="mr-2" /> {t("renameWorkspace")}
                 </ContextMenuItem>
                 <ContextMenuSeparator />
                 <ContextMenuItem className="text-destructive" onClick={() => handleDeleteWorkspace(ws)}>
-                  <Trash2 size={14} className="mr-2" /> 删除
+                  <Trash2 size={14} className="mr-2" /> {t("deleteWorkspace")}
                 </ContextMenuItem>
               </ContextMenuContent>
             </ContextMenu>
@@ -547,37 +561,40 @@ export default function WorkspaceTree({
                       </ContextMenuTrigger>
                       <ContextMenuContent className="w-44">
                         <ContextMenuItem onClick={() => handleOpenProject(project, ws)}>
-                          <Terminal size={14} className="mr-2" /> 打开终端
+                          <Terminal size={14} className="mr-2" /> {t("openTerminal")}
                         </ContextMenuItem>
                         <ContextMenuItem onClick={() => handleOpenClaudeProject(project, ws)}>
-                          <Terminal size={14} className="mr-2" /> 打开 Claude Code
+                          <Terminal size={14} className="mr-2" /> {t("openClaudeCode")}
                         </ContextMenuItem>
                         <ContextMenuItem onClick={() => handleRevealFolder(project.path)}>
-                          <FolderOpen size={14} className="mr-2" /> 打开文件夹
+                          <FolderOpen size={14} className="mr-2" /> {t("openFolder")}
                         </ContextMenuItem>
                         <ContextMenuSub>
                           <ContextMenuSubTrigger>
-                            <Copy size={14} className="mr-2" /> 复制路径
+                            <Copy size={14} className="mr-2" /> {t("copyPath")}
                           </ContextMenuSubTrigger>
                           <ContextMenuSubContent>
                             <ContextMenuItem onClick={() => handleCopyPath(project.path)}>
-                              绝对路径
+                              {t("absolutePath")}
                             </ContextMenuItem>
                             <ContextMenuItem onClick={() => handleCopyPath(getRelativePath(project.path, ws.path))}>
-                              相对路径
+                              {t("relativePath")}
                             </ContextMenuItem>
                           </ContextMenuSubContent>
                         </ContextMenuSub>
                         <ContextMenuSeparator />
                         <ContextMenuItem onClick={() => handleSetAlias(ws, project)}>
-                          <Pencil size={14} className="mr-2" /> 设置别名
+                          <Pencil size={14} className="mr-2" /> {t("setAlias")}
                         </ContextMenuItem>
                         <ContextMenuItem onClick={() => onOpenHistory(project.path)}>
-                          <Clock size={14} className="mr-2" /> 文件历史
+                          <Clock size={14} className="mr-2" /> {t("fileHistory")}
+                        </ContextMenuItem>
+                        <ContextMenuItem onClick={() => handleOpenWorktreeManager(project, ws)}>
+                          <GitBranch size={14} className="mr-2" /> {t("worktreeManager")}
                         </ContextMenuItem>
                         <ContextMenuSeparator />
                         <ContextMenuItem className="text-destructive" onClick={() => handleRemoveProject(ws, project)}>
-                          <Trash2 size={14} className="mr-2" /> 移除项目
+                          <Trash2 size={14} className="mr-2" /> {t("removeProject")}
                         </ContextMenuItem>
                       </ContextMenuContent>
                     </ContextMenu>
@@ -586,27 +603,42 @@ export default function WorkspaceTree({
                     {expandedProjectId === project.id && (
                       <div className="ml-6 py-1 flex flex-col gap-0.5">
                         {(worktreeCache[project.path] || []).map((wt) => (
-                          <div
-                            key={wt.path}
-                            className={`flex items-center gap-1.5 px-2 py-1 cursor-pointer rounded-lg transition-colors ${
-                              isDark ? 'hover:bg-white/5' : 'hover:bg-white/30'
-                            }`}
-                            onClick={() => handleOpenWorktree(wt.path)}
-                          >
-                            <FolderOpen size={12} className="shrink-0" style={{ color: "var(--app-text-tertiary)" }} />
-                            <span className="flex-1 text-[11px] truncate" style={{ color: "var(--app-text-secondary)" }}>
-                              {wt.isMain ? "主目录" : wt.branch || wt.path}
-                            </span>
-                            {wt.isMain && (
-                              <Badge variant="outline" className="text-[9px] px-1 h-4">
-                                主
-                              </Badge>
-                            )}
-                          </div>
+                          <ContextMenu key={wt.path}>
+                            <ContextMenuTrigger asChild>
+                              <div
+                                className={`flex items-center gap-1.5 px-2 py-1 cursor-pointer rounded-lg transition-colors ${
+                                  isDark ? 'hover:bg-white/5' : 'hover:bg-white/30'
+                                }`}
+                                onClick={() => handleOpenWorktree(wt.path, ws)}
+                              >
+                                <GitBranch size={12} className="shrink-0" style={{ color: "var(--app-text-tertiary)" }} />
+                                <span className="flex-1 text-[11px] truncate" style={{ color: "var(--app-text-secondary)" }}>
+                                  {wt.isMain ? t("mainDir") : wt.branch || wt.path}
+                                </span>
+                                {wt.isMain && (
+                                  <Badge variant="outline" className="text-[9px] px-1 h-4">
+                                    {t("dialogs:mainBadge")}
+                                  </Badge>
+                                )}
+                              </div>
+                            </ContextMenuTrigger>
+                            <ContextMenuContent className="w-44">
+                              <ContextMenuItem onClick={() => handleOpenWorktree(wt.path, ws)}>
+                                <Terminal size={14} className="mr-2" /> {t("openTerminal")}
+                              </ContextMenuItem>
+                              <ContextMenuItem onClick={() => handleRevealFolder(wt.path)}>
+                                <FolderOpen size={14} className="mr-2" /> {t("openFolder")}
+                              </ContextMenuItem>
+                              <ContextMenuSeparator />
+                              <ContextMenuItem onClick={() => handleOpenWorktreeManager(project, ws)}>
+                                <GitBranch size={14} className="mr-2" /> {t("worktreeManager")}
+                              </ContextMenuItem>
+                            </ContextMenuContent>
+                          </ContextMenu>
                         ))}
                         {!worktreeCache[project.path]?.length && (
                           <div className="text-[11px] px-2 py-1" style={{ color: "var(--app-text-tertiary)" }}>
-                            无 Worktree
+                            {t("noWorktree")}
                           </div>
                         )}
                       </div>
@@ -624,7 +656,7 @@ export default function WorkspaceTree({
                   onClick={() => handleImportProject(ws)}
                 >
                   <Plus size={12} className="transition-transform group-hover:rotate-90" />
-                  <span>导入项目</span>
+                  <span>{t("importProject")}</span>
                 </div>
               </div>
             )}
@@ -633,7 +665,7 @@ export default function WorkspaceTree({
 
         {workspaces.length === 0 && (
           <div className={`text-xs text-center py-4 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
-            暂无工作空间
+            {t("noWorkspaces")}
           </div>
         )}
       </div>
@@ -648,107 +680,89 @@ export default function WorkspaceTree({
         onClick={handleCreateWorkspace}
       >
         <Plus className="w-3.5 h-3.5 transition-transform group-hover:rotate-90" />
-        新建工作空间
-      </button>
-
-      {/* Section: 工具 */}
-      <div className="flex items-center justify-between px-3 py-3 mt-4 mb-1">
-        <span className={`text-[11px] font-bold uppercase tracking-wider ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>工具</span>
-      </div>
-      <button
-        className={`w-full group flex items-center justify-between px-3 py-2.5 mb-1 rounded-xl transition-all duration-300 border border-transparent ${
-          isDark
-            ? 'text-slate-400 hover:bg-white/5 hover:text-slate-200'
-            : 'text-slate-500 hover:bg-white/40 hover:text-slate-900 hover:shadow-sm'
-        }`}
-        onClick={() => onOpenHistory("")}
-      >
-        <div className="flex items-center gap-3">
-          <Clock className="w-4 h-4 text-slate-400 group-hover:text-slate-500" />
-          <span className="text-sm font-medium tracking-wide">文件历史</span>
-        </div>
+        {t("newWorkspace")}
       </button>
 
       {/* Dialogs */}
       <Dialog open={newWorkspaceOpen} onOpenChange={setNewWorkspaceOpen}>
         <DialogContent className="sm:max-w-md">
-          <DialogHeader><DialogTitle>新建工作空间</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{t("dialogs:newWorkspace")}</DialogTitle></DialogHeader>
           <div className="py-4 flex flex-col gap-3">
             <Input
               value={newWorkspaceName}
               onChange={(e) => setNewWorkspaceName(e.target.value)}
-              placeholder="工作空间名称"
+              placeholder={t("dialogs:workspaceNamePlaceholder")}
               onKeyDown={(e) => e.key === "Enter" && confirmCreateWorkspace()}
             />
             <div className="flex gap-2">
               <Input
                 value={newWorkspacePath}
                 readOnly
-                placeholder="选择工作空间根目录"
+                placeholder={t("dialogs:selectParentDir")}
                 className="flex-1"
               />
               <Button variant="secondary" onClick={handleSelectNewWorkspacePath}>
-                <FolderOpen size={14} className="mr-1" /> 浏览
+                <FolderOpen size={14} className="mr-1" /> {t("common:browse")}
               </Button>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="secondary" onClick={() => setNewWorkspaceOpen(false)}>取消</Button>
-            <Button onClick={confirmCreateWorkspace} disabled={!newWorkspaceName.trim() || !newWorkspacePath.trim()}>创建</Button>
+            <Button variant="secondary" onClick={() => setNewWorkspaceOpen(false)}>{t("common:cancel")}</Button>
+            <Button onClick={confirmCreateWorkspace} disabled={!newWorkspaceName.trim() || !newWorkspacePath.trim()}>{t("common:create")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       <Dialog open={renameWorkspaceOpen} onOpenChange={setRenameWorkspaceOpen}>
         <DialogContent className="sm:max-w-sm">
-          <DialogHeader><DialogTitle>重命名工作空间</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{t("dialogs:renameWorkspace")}</DialogTitle></DialogHeader>
           <div className="py-4">
             <Input
               value={renameWorkspaceNewName}
               onChange={(e) => setRenameWorkspaceNewName(e.target.value)}
-              placeholder="新名称"
+              placeholder={t("dialogs:newNamePlaceholder")}
               onKeyDown={(e) => e.key === "Enter" && confirmRenameWorkspace()}
             />
           </div>
           <DialogFooter>
-            <Button variant="secondary" onClick={() => setRenameWorkspaceOpen(false)}>取消</Button>
-            <Button onClick={confirmRenameWorkspace}>确定</Button>
+            <Button variant="secondary" onClick={() => setRenameWorkspaceOpen(false)}>{t("common:cancel")}</Button>
+            <Button onClick={confirmRenameWorkspace}>{t("common:confirm")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       <Dialog open={aliasDialogOpen} onOpenChange={setAliasDialogOpen}>
         <DialogContent className="sm:max-w-sm">
-          <DialogHeader><DialogTitle>设置项目别名</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{t("dialogs:setProjectAlias")}</DialogTitle></DialogHeader>
           <div className="py-4">
             <Input
               value={aliasValue}
               onChange={(e) => setAliasValue(e.target.value)}
-              placeholder="留空则使用文件夹名"
+              placeholder={t("dialogs:projectAliasPlaceholder")}
               onKeyDown={(e) => e.key === "Enter" && confirmSetAlias()}
             />
           </div>
           <DialogFooter>
-            <Button variant="secondary" onClick={() => setAliasDialogOpen(false)}>取消</Button>
-            <Button onClick={confirmSetAlias}>确定</Button>
+            <Button variant="secondary" onClick={() => setAliasDialogOpen(false)}>{t("common:cancel")}</Button>
+            <Button onClick={confirmSetAlias}>{t("common:confirm")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       <Dialog open={wsAliasDialogOpen} onOpenChange={setWsAliasDialogOpen}>
         <DialogContent className="sm:max-w-sm">
-          <DialogHeader><DialogTitle>设置工作空间别名</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{t("dialogs:setWorkspaceAlias")}</DialogTitle></DialogHeader>
           <div className="py-4">
             <Input
               value={wsAliasValue}
               onChange={(e) => setWsAliasValue(e.target.value)}
-              placeholder="留空则使用原始名称"
+              placeholder={t("dialogs:workspaceAliasPlaceholder")}
               onKeyDown={(e) => e.key === "Enter" && confirmSetWorkspaceAlias()}
             />
           </div>
           <DialogFooter>
-            <Button variant="secondary" onClick={() => setWsAliasDialogOpen(false)}>取消</Button>
-            <Button onClick={confirmSetWorkspaceAlias}>确定</Button>
+            <Button variant="secondary" onClick={() => setWsAliasDialogOpen(false)}>{t("common:cancel")}</Button>
+            <Button onClick={confirmSetWorkspaceAlias}>{t("common:confirm")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -769,10 +783,10 @@ export default function WorkspaceTree({
 
       <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <DialogContent className="sm:max-w-sm">
-          <DialogHeader><DialogTitle>确认操作</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{t("common:confirmAction")}</DialogTitle></DialogHeader>
           <p className="text-sm text-muted-foreground py-2">{confirmMessage}</p>
           <DialogFooter>
-            <Button variant="secondary" onClick={() => setConfirmOpen(false)}>取消</Button>
+            <Button variant="secondary" onClick={() => setConfirmOpen(false)}>{t("common:cancel")}</Button>
             <Button
               variant="destructive"
               onClick={() => {
@@ -780,11 +794,23 @@ export default function WorkspaceTree({
                 confirmCallback?.();
               }}
             >
-              确定
+              {t("common:confirm")}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <WorktreeManager
+        open={worktreeManagerOpen}
+        onOpenChange={(open) => {
+          setWorktreeManagerOpen(open);
+          if (!open && worktreeManagerProjectPath) {
+            fetchWorktrees(worktreeManagerProjectPath);
+          }
+        }}
+        projectPath={worktreeManagerProjectPath}
+        onOpenWorktree={(path) => handleOpenWorktree(path, worktreeManagerWs)}
+      />
     </>
   );
 }

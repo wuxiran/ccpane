@@ -305,7 +305,7 @@ impl HistoryService {
                 return Ok(());
             }
 
-            let _ = repo.save_version(&relative_str, &content, false, branch);
+            let _ = repo.save_version(&relative_str, &content, false, branch, config.history.min_save_interval_secs);
         }
 
         Ok(())
@@ -343,7 +343,7 @@ impl HistoryService {
         let versions = repo.list_versions(&relative_str)?;
         if let Some(last_ver) = versions.last() {
             if let Ok(content) = repo.get_version_content(&relative_str, &last_ver.id) {
-                let _ = repo.save_version(&relative_str, &content, true, branch);
+                let _ = repo.save_version(&relative_str, &content, true, branch, 0);
             }
         }
 

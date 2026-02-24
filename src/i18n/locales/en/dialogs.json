@@ -72,6 +72,7 @@
   "branchNamePlaceholder": "Branch name (optional)",
   "creating": "Creating...",
   "existingWorktrees": "Existing Worktrees",
+  "noWorktrees": "No Worktrees",
   "cannotDeleteMain": "Cannot delete main working directory",
   "confirmDeleteWorktree": "Are you sure you want to delete Worktree \"{{path}}\"?",
   "createWorktreeFailed": "Failed to create Worktree: {{error}}",

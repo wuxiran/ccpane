@@ -9,6 +9,7 @@ describe("useDialogStore", () => {
       journalWorkspaceName: "",
       localHistoryOpen: false,
       localHistoryProjectPath: "",
+      localHistoryFilePath: "",
       sessionCleanerOpen: false,
       sessionCleanerProjectPath: "",
     });
@@ -22,6 +23,7 @@ describe("useDialogStore", () => {
       expect(state.journalWorkspaceName).toBe("");
       expect(state.localHistoryOpen).toBe(false);
       expect(state.localHistoryProjectPath).toBe("");
+      expect(state.localHistoryFilePath).toBe("");
       expect(state.sessionCleanerOpen).toBe(false);
       expect(state.sessionCleanerProjectPath).toBe("");
     });
@@ -70,16 +72,28 @@ describe("useDialogStore", () => {
       const state = useDialogStore.getState();
       expect(state.localHistoryOpen).toBe(true);
       expect(state.localHistoryProjectPath).toBe("/path/to/project");
+      expect(state.localHistoryFilePath).toBe("");
     });
 
-    it("closeLocalHistory 应设置 localHistoryOpen 为 false", () => {
+    it("openLocalHistory 带 filePath 应同时设置 localHistoryFilePath", () => {
+      useDialogStore.getState().openLocalHistory("/path/to/project", "src/main.ts");
+
+      const state = useDialogStore.getState();
+      expect(state.localHistoryOpen).toBe(true);
+      expect(state.localHistoryProjectPath).toBe("/path/to/project");
+      expect(state.localHistoryFilePath).toBe("src/main.ts");
+    });
+
+    it("closeLocalHistory 应设置 localHistoryOpen 为 false 并清空 filePath", () => {
       useDialogStore.setState({
         localHistoryOpen: true,
         localHistoryProjectPath: "/path/to/project",
+        localHistoryFilePath: "src/main.ts",
       });
 
       useDialogStore.getState().closeLocalHistory();
       expect(useDialogStore.getState().localHistoryOpen).toBe(false);
+      expect(useDialogStore.getState().localHistoryFilePath).toBe("");
     });
   });
 

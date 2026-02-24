@@ -24,6 +24,9 @@ export default memo(function Panel({ pane }: PanelProps) {
   const splitRight = usePanesStore((s) => s.splitRight);
   const splitDown = usePanesStore((s) => s.splitDown);
   const splitAndMoveTab = usePanesStore((s) => s.splitAndMoveTab);
+  const closeTabsToLeft = usePanesStore((s) => s.closeTabsToLeft);
+  const closeTabsToRight = usePanesStore((s) => s.closeTabsToRight);
+  const closeOtherTabs = usePanesStore((s) => s.closeOtherTabs);
   const setActivePane = usePanesStore((s) => s.setActivePane);
   const updateTabSession = usePanesStore((s) => s.updateTabSession);
 
@@ -69,6 +72,38 @@ export default memo(function Panel({ pane }: PanelProps) {
       closeTab(pane.id, tabId);
     },
     [pane.id, pane.tabs, closeTab]
+  );
+
+  const handleCloseTabsToLeft = useCallback(
+    (tabId: string) => {
+      const targetIdx = pane.tabs.findIndex((t) => t.id === tabId);
+      pane.tabs.slice(0, targetIdx).filter((t) => !t.pinned).forEach((t) => {
+        if (t.sessionId) terminalService.killSession(t.sessionId).catch(console.error);
+      });
+      closeTabsToLeft(pane.id, tabId);
+    },
+    [pane.id, pane.tabs, closeTabsToLeft]
+  );
+
+  const handleCloseTabsToRight = useCallback(
+    (tabId: string) => {
+      const targetIdx = pane.tabs.findIndex((t) => t.id === tabId);
+      pane.tabs.slice(targetIdx + 1).filter((t) => !t.pinned).forEach((t) => {
+        if (t.sessionId) terminalService.killSession(t.sessionId).catch(console.error);
+      });
+      closeTabsToRight(pane.id, tabId);
+    },
+    [pane.id, pane.tabs, closeTabsToRight]
+  );
+
+  const handleCloseOtherTabs = useCallback(
+    (tabId: string) => {
+      pane.tabs.filter((t) => t.id !== tabId && !t.pinned).forEach((t) => {
+        if (t.sessionId) terminalService.killSession(t.sessionId).catch(console.error);
+      });
+      closeOtherTabs(pane.id, tabId);
+    },
+    [pane.id, pane.tabs, closeOtherTabs]
   );
 
   const handleTogglePin = useCallback(
@@ -170,6 +205,9 @@ export default memo(function Panel({ pane }: PanelProps) {
         onFullscreen={handleFullscreen}
         onSplitAndMoveRight={handleSplitAndMoveRight}
         onSplitAndMoveDown={handleSplitAndMoveDown}
+        onCloseTabsToLeft={handleCloseTabsToLeft}
+        onCloseTabsToRight={handleCloseTabsToRight}
+        onCloseOtherTabs={handleCloseOtherTabs}
       />
 
       {/* 内容区 */}

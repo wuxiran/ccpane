@@ -9,6 +9,7 @@ import SettingsPanel from "@/components/SettingsPanel";
 import JournalPanel from "@/components/JournalPanel";
 import LocalHistoryPanel from "@/components/LocalHistoryPanel";
 import SessionCleanerPanel from "@/components/SessionCleanerPanel";
+import BorderlessFloatingButton from "@/components/BorderlessFloatingButton";
 import {
   usePanesStore,
   useFullscreenStore,
@@ -20,7 +21,7 @@ import {
   useSettingsStore,
 } from "@/stores";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
-import { historyService, terminalService } from "@/services";
+import { historyService, terminalService, localHistoryService } from "@/services";
 import { waitForTauri } from "@/utils";
 import i18n from "@/i18n";
 
@@ -39,6 +40,7 @@ export default function App() {
   const journalWorkspaceName = useDialogStore((s) => s.journalWorkspaceName);
   const localHistoryOpen = useDialogStore((s) => s.localHistoryOpen);
   const localHistoryProjectPath = useDialogStore((s) => s.localHistoryProjectPath);
+  const localHistoryFilePath = useDialogStore((s) => s.localHistoryFilePath);
   const sessionCleanerOpen = useDialogStore((s) => s.sessionCleanerOpen);
   const sessionCleanerProjectPath = useDialogStore((s) => s.sessionCleanerProjectPath);
 
@@ -164,6 +166,15 @@ export default function App() {
       openProject(projectId, path, undefined, workspaceName, providerId, workspacePath, launchClaude);
       const name = path.split(/[/\\]/).pop() || path;
       historyService.add(projectId, name, path).catch(console.error);
+      localHistoryService.initProjectHistory(path).catch(console.error);
+      // CC 启动时自动创建项目快照，方便后续项目级恢复
+      if (launchClaude) {
+        localHistoryService.createAutoLabel(
+          workspacePath || path,
+          `CC Session: ${new Date().toLocaleString()}`,
+          "claude_session"
+        ).catch(console.error);
+      }
     },
     [openProject]
   );
@@ -251,6 +262,9 @@ export default function App() {
           </>
         )}
 
+        {/* 无边框浮动退出按钮 */}
+        <BorderlessFloatingButton />
+
         {/* Dialog 组件 */}
         <SettingsPanel
           open={settingsOpen}
@@ -263,9 +277,9 @@ export default function App() {
         />
         <LocalHistoryPanel
           open={localHistoryOpen}
-          onOpenChange={(open) => open ? useDialogStore.getState().openLocalHistory(localHistoryProjectPath) : useDialogStore.getState().closeLocalHistory()}
+          onOpenChange={(open) => open ? useDialogStore.getState().openLocalHistory(localHistoryProjectPath, localHistoryFilePath) : useDialogStore.getState().closeLocalHistory()}
           projectPath={localHistoryProjectPath}
-          filePath=""
+          filePath={localHistoryFilePath}
         />
         <SessionCleanerPanel
           open={sessionCleanerOpen}

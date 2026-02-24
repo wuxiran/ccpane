@@ -34,6 +34,12 @@
   "pinFailed": "固定状态更新失败: {{error}}",
   "hideFailed": "隐藏状态更新失败: {{error}}",
   "reorderFailed": "排序失败: {{error}}",
+  "openClaudeCode": "打开 Claude Code",
+  "openFolder": "打开文件夹",
+  "copyPath": "复制路径",
+  "absolutePath": "绝对路径",
+  "relativePath": "相对路径",
+  "worktreeManager": "Worktree 管理",
   "openHere": "在此目录打开",
   "deleteWorkspaceTitle": "删除工作空间",
   "deleteWorkspaceConfirm": "确定要删除工作空间「{{name}}」吗？此操作不可撤销。",
@@ -44,5 +50,9 @@
   "systemReady": "系统就绪",
   "noLaunchRecords": "暂无启动记录",
   "importHint": "请在工作空间中点击「导入项目」",
-  "newHint": "请先创建工作空间，然后导入项目"
+  "newHint": "请先创建工作空间，然后导入项目",
+  "setWorkspacePath": "设置工作空间路径",
+  "clearWorkspacePath": "清除工作空间路径",
+  "renameWorkspace": "重命名",
+  "selectProjectFirst": "请先选择一个项目"
 }

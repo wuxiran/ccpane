@@ -38,6 +38,7 @@ function createTestHistoryConfig(overrides?: Partial<HistoryConfig>): HistoryCon
     maxAgeDays: 30,
     maxFileSize: 1048576,
     maxTotalSize: 104857600,
+    minSaveIntervalSecs: 300,
     ...overrides,
   };
 }

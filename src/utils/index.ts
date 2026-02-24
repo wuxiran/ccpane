@@ -1,6 +1,20 @@
 export { formatRelativeTime, formatFullTime, formatSize } from "./format";
 export { getFileName, getDirName, getProjectName } from "./path";
 
+/**
+ * 从 catch 到的未知错误中提取可读消息。
+ * Tauri IPC 返回的 AppError 结构为 `{ message: "..." }`，
+ * 直接 `String(e)` 会得到 `[object Object]`。
+ */
+export function getErrorMessage(e: unknown): string {
+  if (typeof e === "string") return e;
+  if (e instanceof Error) return e.message;
+  if (typeof e === "object" && e !== null && "message" in e) {
+    return String((e as { message: unknown }).message);
+  }
+  return String(e);
+}
+
 /** Tauri IPC 桥接是否已注入（在 Tauri webview 内运行时为 true） */
 export function isTauriReady(): boolean {
   return typeof window !== "undefined" && window.__TAURI_INTERNALS__ !== undefined;

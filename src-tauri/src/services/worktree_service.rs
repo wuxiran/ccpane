@@ -1,4 +1,4 @@
-use crate::utils::{output_with_timeout, GIT_LOCAL_TIMEOUT};
+use crate::utils::{output_with_timeout, GIT_CHECKOUT_TIMEOUT, GIT_LOCAL_TIMEOUT};
 use std::path::PathBuf;
 use std::process::Command;
 use serde::{Deserialize, Serialize};
@@ -129,7 +129,6 @@ impl WorktreeService {
         let mut args = vec![
             "worktree".to_string(),
             "add".to_string(),
-            worktree_path_str.clone(),
         ];
 
         if let Some(b) = branch {
@@ -137,11 +136,14 @@ impl WorktreeService {
             args.push(b.to_string());
         }
 
+        args.push(worktree_path_str.clone());
+
         let output = output_with_timeout(
             Command::new("git")
                 .args(&args)
-                .current_dir(project_path),
-            GIT_LOCAL_TIMEOUT,
+                .current_dir(project_path)
+                .env("GIT_LFS_SKIP_SMUDGE", "1"),
+            GIT_CHECKOUT_TIMEOUT,
         )
         .map_err(|e| format!("Failed to execute git command: {}", e))?;
 
@@ -165,7 +167,7 @@ impl WorktreeService {
 
         let output = output_with_timeout(
             Command::new("git")
-                .args(["worktree", "remove", worktree_path])
+                .args(["worktree", "remove", "--force", worktree_path])
                 .current_dir(project_path),
             GIT_LOCAL_TIMEOUT,
         )

@@ -52,7 +52,7 @@ interface ConfirmDialogProps extends DialogFieldProps {
   variant?: "default" | "destructive";
 }
 
-function ConfirmDialog({ open, setOpen, title, description, onConfirm, variant = "default" }: ConfirmDialogProps) {
+export function ConfirmDialog({ open, setOpen, title, description, onConfirm, variant = "default" }: ConfirmDialogProps) {
   const { t } = useTranslation("dialogs");
   return (
     <Dialog open={open} onOpenChange={setOpen}>

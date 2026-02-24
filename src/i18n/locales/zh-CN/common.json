@@ -35,5 +35,6 @@
   "splitRight": "向右分屏",
   "splitDown": "向下分屏",
   "exitBorderless": "退出无边框模式",
-  "switchLanguage": "切换语言"
+  "switchLanguage": "切换语言",
+  "confirmAction": "确认操作"
 }

@@ -126,6 +126,9 @@ interface PanesState {
   reorderTabs: (paneId: string, fromIndex: number, toIndex: number) => void;
   moveTab: (fromPaneId: string, toPaneId: string, tabId: string, toIndex?: number) => void;
   splitAndMoveTab: (paneId: string, tabId: string, direction: SplitDirection) => void;
+  closeTabsToLeft: (paneId: string, tabId: string) => void;
+  closeTabsToRight: (paneId: string, tabId: string) => void;
+  closeOtherTabs: (paneId: string, tabId: string) => void;
   selectTab: (paneId: string, tabId: string) => void;
   setActivePane: (paneId: string) => void;
   updateTabSession: (paneId: string, tabId: string, sessionId: string) => void;
@@ -452,6 +455,83 @@ export const usePanesStore = create<PanesState>()(
           p.activeTabId = p.tabs[newIdx].id;
         }
       });
+    },
+
+    closeTabsToLeft: (paneId, tabId) => {
+      const snapshot = get();
+      const snapPane = findPane(snapshot.rootPane, paneId);
+      if (snapPane?.type !== "panel") return;
+      const targetIdx = snapPane.tabs.findIndex((t) => t.id === tabId);
+      if (targetIdx <= 0) return;
+
+      const toClose = snapPane.tabs.slice(0, targetIdx).filter((t) => !t.pinned);
+      if (toClose.length === 0) return;
+
+      set((state) => {
+        const p = findPane(state.rootPane, paneId);
+        if (p?.type !== "panel") return;
+        const closeIds = new Set(toClose.map((t) => t.id));
+        p.tabs = p.tabs.filter((t) => !closeIds.has(t.id));
+        if (p.activeTabId && closeIds.has(p.activeTabId)) {
+          p.activeTabId = tabId;
+        }
+      });
+
+      // 如果所有标签都被关闭，关闭面板
+      const afterPane = findPane(get().rootPane, paneId);
+      if (afterPane?.type === "panel" && afterPane.tabs.length === 0) {
+        get().closePane(paneId);
+      }
+    },
+
+    closeTabsToRight: (paneId, tabId) => {
+      const snapshot = get();
+      const snapPane = findPane(snapshot.rootPane, paneId);
+      if (snapPane?.type !== "panel") return;
+      const targetIdx = snapPane.tabs.findIndex((t) => t.id === tabId);
+      if (targetIdx === -1 || targetIdx >= snapPane.tabs.length - 1) return;
+
+      const toClose = snapPane.tabs.slice(targetIdx + 1).filter((t) => !t.pinned);
+      if (toClose.length === 0) return;
+
+      set((state) => {
+        const p = findPane(state.rootPane, paneId);
+        if (p?.type !== "panel") return;
+        const closeIds = new Set(toClose.map((t) => t.id));
+        p.tabs = p.tabs.filter((t) => !closeIds.has(t.id));
+        if (p.activeTabId && closeIds.has(p.activeTabId)) {
+          p.activeTabId = tabId;
+        }
+      });
+
+      const afterPane = findPane(get().rootPane, paneId);
+      if (afterPane?.type === "panel" && afterPane.tabs.length === 0) {
+        get().closePane(paneId);
+      }
+    },
+
+    closeOtherTabs: (paneId, tabId) => {
+      const snapshot = get();
+      const snapPane = findPane(snapshot.rootPane, paneId);
+      if (snapPane?.type !== "panel") return;
+
+      const toClose = snapPane.tabs.filter((t) => t.id !== tabId && !t.pinned);
+      if (toClose.length === 0) return;
+
+      set((state) => {
+        const p = findPane(state.rootPane, paneId);
+        if (p?.type !== "panel") return;
+        const closeIds = new Set(toClose.map((t) => t.id));
+        p.tabs = p.tabs.filter((t) => !closeIds.has(t.id));
+        if (p.activeTabId && closeIds.has(p.activeTabId)) {
+          p.activeTabId = tabId;
+        }
+      });
+
+      const afterPane = findPane(get().rootPane, paneId);
+      if (afterPane?.type === "panel" && afterPane.tabs.length === 0) {
+        get().closePane(paneId);
+      }
     },
 
     selectTab: (paneId, tabId) => {
