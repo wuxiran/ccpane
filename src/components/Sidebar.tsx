@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useWorkspacesStore, useProvidersStore, useThemeStore } from "@/stores";
-import { historyService, localHistoryService, type LaunchRecord } from "@/services";
+import { historyService, localHistoryService, settingsService, type LaunchRecord } from "@/services";
 import { waitForTauri } from "@/utils";
 import WorkspaceTree from "@/components/sidebar/WorkspaceTree";
 import RecentLaunches from "@/components/sidebar/RecentLaunches";
@@ -114,6 +114,16 @@ export default function Sidebar({
       console.error("Failed to fetch history:", e);
     }
   }, []);
+
+  async function handleSelfDialogue() {
+    try {
+      const info = await settingsService.getDataDirInfo();
+      await settingsService.generateClaudeMd();
+      onOpenTerminal(info.currentPath, undefined, undefined, undefined, true);
+    } catch (e) {
+      console.error("Failed to open self-dialogue:", e);
+    }
+  }
 
   async function clearHistory() {
     try {
@@ -233,11 +243,11 @@ export default function Sidebar({
             </SplitView>
           </div>
 
-          <SidebarFooter collapsed={false} onSettings={onSettings} />
+          <SidebarFooter collapsed={false} onSettings={onSettings} onSelfDialogue={handleSelfDialogue} />
         </>
       )}
 
-      {collapsed && <SidebarFooter collapsed onSettings={onSettings} />}
+      {collapsed && <SidebarFooter collapsed onSettings={onSettings} onSelfDialogue={handleSelfDialogue} />}
 
       </div>{/* 侧边栏主体内容结束 */}
 

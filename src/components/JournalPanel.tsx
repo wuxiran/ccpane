@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { getErrorMessage } from "@/utils";
 import { BookOpen, Save, FileText } from "lucide-react";
@@ -20,6 +21,7 @@ interface JournalPanelProps {
 }
 
 export default function JournalPanel({ open, onOpenChange, workspaceName, onSaved }: JournalPanelProps) {
+  const { t } = useTranslation(["dialogs", "common"]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [journalIndex, setJournalIndex] = useState<JournalIndex | null>(null);
@@ -65,7 +67,7 @@ export default function JournalPanel({ open, onOpenChange, workspaceName, onSave
       onSaved?.();
     } catch (e) {
       console.error("Failed to save session:", e);
-      toast.error("保存失败: " + getErrorMessage(e));
+      toast.error(t("sessionSaveFailed", { error: getErrorMessage(e) }));
     } finally {
       setSaving(false);
     }
@@ -77,7 +79,7 @@ export default function JournalPanel({ open, onOpenChange, workspaceName, onSave
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <BookOpen size={18} />
-            会话日志
+            {t("journalTitle")}
           </DialogTitle>
         </DialogHeader>
 
@@ -88,17 +90,17 @@ export default function JournalPanel({ open, onOpenChange, workspaceName, onSave
             style={{ border: "1px solid var(--app-border)", background: "var(--app-content)" }}
           >
             <h3 className="text-sm font-semibold mb-4" style={{ color: "var(--app-text-primary)" }}>
-              保存会话摘要
+              {t("saveSession")}
             </h3>
 
             <div className="flex flex-col gap-3">
               <div className="flex flex-col gap-1">
-                <label className="text-xs" style={{ color: "var(--app-text-secondary)" }}>标题 *</label>
-                <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="例如：实现用户认证功能" />
+                <label className="text-xs" style={{ color: "var(--app-text-secondary)" }}>{t("sessionTitleLabel")}</label>
+                <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t("sessionTitlePlaceholder")} />
               </div>
 
               <div className="flex flex-col gap-1">
-                <label className="text-xs" style={{ color: "var(--app-text-secondary)" }}>摘要</label>
+                <label className="text-xs" style={{ color: "var(--app-text-secondary)" }}>{t("summary")}</label>
                 <textarea
                   value={summary}
                   onChange={(e) => setSummary(e.target.value)}
@@ -108,19 +110,19 @@ export default function JournalPanel({ open, onOpenChange, workspaceName, onSave
                     background: "var(--background)",
                     color: "var(--app-text-primary)",
                   }}
-                  placeholder="描述本次会话完成的工作..."
+                  placeholder={t("summaryPlaceholder")}
                   rows={4}
                 />
               </div>
 
               <div className="flex flex-col gap-1">
-                <label className="text-xs" style={{ color: "var(--app-text-secondary)" }}>Git Commits</label>
-                <Input value={commits} onChange={(e) => setCommits(e.target.value)} placeholder="commit hash，多个用逗号分隔" />
+                <label className="text-xs" style={{ color: "var(--app-text-secondary)" }}>{t("gitCommits")}</label>
+                <Input value={commits} onChange={(e) => setCommits(e.target.value)} placeholder={t("gitCommitsPlaceholder")} />
               </div>
 
               <Button className="w-full mt-2" disabled={!title.trim() || saving} onClick={saveSession}>
                 <Save size={14} className="mr-2" />
-                {saving ? "保存中..." : "保存会话"}
+                {saving ? t("saving") : t("saveSession2")}
               </Button>
             </div>
           </div>
@@ -135,11 +137,11 @@ export default function JournalPanel({ open, onOpenChange, workspaceName, onSave
               style={{ borderBottom: "1px solid var(--app-border)" }}
             >
               <h3 className="text-sm font-semibold" style={{ color: "var(--app-text-primary)" }}>
-                历史记录
+                {t("history")}
               </h3>
               {journalIndex && (
                 <div className="flex gap-3 text-[11px]" style={{ color: "var(--app-text-tertiary)" }}>
-                  <span>共 {journalIndex.totalSessions} 个会话</span>
+                  <span>{t("sessionCount", { count: journalIndex.totalSessions })}</span>
                   <span>{journalIndex.activeFile}</span>
                 </div>
               )}
@@ -147,12 +149,12 @@ export default function JournalPanel({ open, onOpenChange, workspaceName, onSave
 
             {loading ? (
               <div className="flex-1 flex items-center justify-center" style={{ color: "var(--app-text-tertiary)" }}>
-                加载中...
+                {t("common:loading")}
               </div>
             ) : !journalContent ? (
               <div className="flex-1 flex flex-col items-center justify-center gap-3" style={{ color: "var(--app-text-tertiary)" }}>
                 <FileText size={48} />
-                <p>暂无会话记录</p>
+                <p>{t("noSessions")}</p>
               </div>
             ) : (
               <pre

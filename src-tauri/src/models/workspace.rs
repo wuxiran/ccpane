@@ -23,6 +23,12 @@ pub struct Workspace {
     pub provider_id: Option<String>,
     #[serde(default)]
     pub path: Option<String>,
+    #[serde(default)]
+    pub pinned: bool,
+    #[serde(default)]
+    pub hidden: bool,
+    #[serde(default)]
+    pub sort_order: Option<i32>,
 }
 
 impl Workspace {
@@ -35,6 +41,9 @@ impl Workspace {
             projects: Vec::new(),
             provider_id: None,
             path,
+            pinned: false,
+            hidden: false,
+            sort_order: None,
         }
     }
 }

@@ -1,8 +1,26 @@
 {
-  "name": "tauri-app",
-  "private": true,
-  "version": "0.1.0",
+  "name": "cc-panes",
+  "version": "0.94.0",
+  "description": "Multi-instance split-pane manager for Claude Code",
   "type": "module",
+  "license": "GPL-3.0",
+  "author": "wuxiran",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/wuxiran/cc-panes.git"
+  },
+  "homepage": "https://github.com/wuxiran/cc-panes",
+  "bugs": {
+    "url": "https://github.com/wuxiran/cc-panes/issues"
+  },
+  "keywords": [
+    "claude-code",
+    "terminal",
+    "split-pane",
+    "tauri",
+    "desktop-app",
+    "ai-tools"
+  ],
   "scripts": {
     "dev": "vite",
     "build": "vite build",

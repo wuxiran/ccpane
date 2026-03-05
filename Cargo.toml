@@ -3,4 +3,7 @@ resolver = "2"
 members = [
     "src-tauri",
     "cc-panes-hook",
+    "cc-memory",
+    "cc-memory-mcp",
+    "cc-notify",
 ]

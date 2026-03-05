@@ -218,25 +218,25 @@ export default memo(function TabBar({
             </ContextMenuTrigger>
             <ContextMenuContent className="w-48">
               <ContextMenuItem onClick={() => startRename(tab)}>
-                <Pencil size={14} className="mr-2" /> {t("renameTab")}
+                <Pencil /> {t("renameTab")}
               </ContextMenuItem>
-              <ContextMenuItem onClick={() => onTogglePin(tab.id)}>
+              <ContextMenuItem inset onClick={() => onTogglePin(tab.id)}>
                 {tab.pinned ? t("unpinTab") : t("pinTab")}
               </ContextMenuItem>
               <ContextMenuSeparator />
               <ContextMenuItem onClick={onSplitRight}>
-                <PanelRight size={14} className="mr-2" /> {t("splitRight")}
+                <PanelRight /> {t("splitRight")}
               </ContextMenuItem>
               <ContextMenuItem onClick={onSplitDown}>
-                <PanelBottom size={14} className="mr-2" /> {t("splitDown")}
+                <PanelBottom /> {t("splitDown")}
               </ContextMenuItem>
               {tabs.length > 1 && (
                 <>
                   <ContextMenuItem onClick={() => onSplitAndMoveRight(tab.id)}>
-                    <PanelRight size={14} className="mr-2" /> {t("splitAndMoveRight")}
+                    <PanelRight /> {t("splitAndMoveRight")}
                   </ContextMenuItem>
                   <ContextMenuItem onClick={() => onSplitAndMoveDown(tab.id)}>
-                    <PanelBottom size={14} className="mr-2" /> {t("splitAndMoveDown")}
+                    <PanelBottom /> {t("splitAndMoveDown")}
                   </ContextMenuItem>
                 </>
               )}
@@ -244,18 +244,21 @@ export default memo(function TabBar({
                 <>
                   <ContextMenuSeparator />
                   <ContextMenuItem
+                    inset
                     disabled={tabs.slice(0, index).filter((t) => !t.pinned).length === 0}
                     onClick={() => onCloseTabsToLeft(tab.id)}
                   >
                     {t("closeTabsToLeft")}
                   </ContextMenuItem>
                   <ContextMenuItem
+                    inset
                     disabled={tabs.slice(index + 1).filter((t) => !t.pinned).length === 0}
                     onClick={() => onCloseTabsToRight(tab.id)}
                   >
                     {t("closeTabsToRight")}
                   </ContextMenuItem>
                   <ContextMenuItem
+                    inset
                     disabled={tabs.filter((_, i) => i !== index && !tabs[i].pinned).length === 0}
                     onClick={() => onCloseOtherTabs(tab.id)}
                   >
@@ -266,7 +269,7 @@ export default memo(function TabBar({
               {!tab.pinned && (
                 <>
                   <ContextMenuSeparator />
-                  <ContextMenuItem className="text-destructive" onClick={() => onClose(tab.id)}>
+                  <ContextMenuItem variant="destructive" inset onClick={() => onClose(tab.id)}>
                     {t("closeTab")}
                   </ContextMenuItem>
                 </>

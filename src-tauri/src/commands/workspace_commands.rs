@@ -108,6 +108,23 @@ pub fn update_workspace_path(
 }
 
 #[tauri::command]
+pub fn update_workspace(
+    name: String,
+    workspace: Workspace,
+    service: State<'_, Arc<WorkspaceService>>,
+) -> AppResult<()> {
+    Ok(service.write_workspace_json(&name, &workspace)?)
+}
+
+#[tauri::command]
+pub fn reorder_workspaces(
+    ordered_names: Vec<String>,
+    service: State<'_, Arc<WorkspaceService>>,
+) -> AppResult<()> {
+    Ok(service.reorder_workspaces(ordered_names)?)
+}
+
+#[tauri::command]
 pub fn scan_workspace_directory(
     root_path: String,
 ) -> AppResult<Vec<ScannedRepo>> {

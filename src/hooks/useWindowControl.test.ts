@@ -203,7 +203,10 @@ describe("useWindowControl", () => {
 
       unmount();
 
-      expect(mockUnlisten).toHaveBeenCalled();
+      // cleanup 中 unlisten.then(fn => fn()) 是异步的，需要等待微任务完成
+      await waitFor(() => {
+        expect(mockUnlisten).toHaveBeenCalled();
+      });
     });
   });
 });

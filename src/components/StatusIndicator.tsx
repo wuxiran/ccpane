@@ -1,4 +1,5 @@
 import { memo } from "react";
+import { useTranslation } from "react-i18next";
 import type { TerminalStatusType } from "@/types";
 
 interface StatusIndicatorProps {
@@ -13,20 +14,24 @@ const statusColors: Record<string, string> = {
   exited: "#ff453a",
 };
 
-const statusLabels: Record<string, string> = {
-  active: "运行中",
-  waitingInput: "等待输入",
-  idle: "空闲",
-  exited: "已退出",
-};
+const statusKeyMap = {
+  active: "statusActive",
+  waitingInput: "statusWaitingInput",
+  idle: "statusIdle",
+  exited: "statusExited",
+} as const;
 
 export default memo(function StatusIndicator({ status, size = 8 }: StatusIndicatorProps) {
+  const { t } = useTranslation("dialogs");
+
   if (!status) return null;
+
+  const labelKey = statusKeyMap[status as keyof typeof statusKeyMap];
 
   return (
     <span
       className="inline-block rounded-full shrink-0 transition-colors duration-300"
-      title={statusLabels[status] ?? ""}
+      title={labelKey ? t(labelKey) : ""}
       style={{
         width: size,
         height: size,

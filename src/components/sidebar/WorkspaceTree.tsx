@@ -6,7 +6,7 @@ import { openPath } from "@tauri-apps/plugin-opener";
 import { toast } from "sonner";
 import {
   Folder, ChevronRight, Trash2, Plus, Pencil, FileText, Clock, ListTodo,
-  FolderOpen, FolderSearch, ShieldCheck, Terminal, Cloud, Check, GitBranch,
+  FolderOpen, FolderSearch, ShieldCheck, Terminal, Cloud, GitBranch,
   FolderRoot, X, Copy, FileStack, Plug,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -16,6 +16,7 @@ import {
 import {
   ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger,
   ContextMenuSeparator, ContextMenuSub, ContextMenuSubTrigger, ContextMenuSubContent,
+  ContextMenuCheckboxItem, ContextMenuRadioGroup, ContextMenuRadioItem,
 } from "@/components/ui/context-menu";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -161,12 +162,12 @@ export default function WorkspaceTree({
 
   async function handleSelectNewWorkspacePath() {
     try {
-      const selected = await open({ directory: true, multiple: false, title: "选择工作空间根目录" });
+      const selected = await open({ directory: true, multiple: false, title: t("selectWorkspaceRoot") });
       if (selected) {
         setNewWorkspacePath(selected);
       }
     } catch (e) {
-      toast.error(`选择路径失败: ${e}`);
+      toast.error(t("selectPathFailed", { error: e }));
     }
   }
 
@@ -176,7 +177,7 @@ export default function WorkspaceTree({
       await createWorkspace(newWorkspaceName.trim(), newWorkspacePath.trim());
       setNewWorkspaceOpen(false);
     } catch (e) {
-      toast.error(`创建失败: ${e}`);
+      toast.error(t("createFailed", { error: e }));
     }
   }
 
@@ -192,17 +193,17 @@ export default function WorkspaceTree({
       await renameWs(renameWorkspaceOldName, renameWorkspaceNewName.trim());
       setRenameWorkspaceOpen(false);
     } catch (e) {
-      toast.error(`重命名失败: ${e}`);
+      toast.error(t("renameFailed", { error: e }));
     }
   }
 
   function handleDeleteWorkspace(ws: Workspace) {
-    setConfirmMessage(`确定要删除工作空间 "${ws.name}" 吗？`);
+    setConfirmMessage(t("confirmDeleteWorkspace", { name: ws.name }));
     setConfirmCallback(() => async () => {
       try {
         await removeWorkspace(ws.name);
       } catch (e) {
-        toast.error(`删除失败: ${e}`);
+        toast.error(t("deleteFailed", { error: e }));
       }
     });
     setConfirmOpen(true);
@@ -212,22 +213,22 @@ export default function WorkspaceTree({
 
   async function handleImportProject(ws: Workspace) {
     try {
-      const selected = await open({ directory: true, multiple: false, title: "选择项目目录" });
+      const selected = await open({ directory: true, multiple: false, title: t("selectProjectDirTitle") });
       if (selected) {
         await addProject(ws.name, selected);
       }
     } catch (e) {
-      toast.error(`导入失败: ${e}`);
+      toast.error(t("importFailed", { error: e }));
     }
   }
 
   function handleRemoveProject(ws: Workspace, project: WorkspaceProject) {
-    setConfirmMessage(`确定要从工作空间移除项目 "${project.alias || getProjectName(project.path)}" 吗？`);
+    setConfirmMessage(t("confirmRemoveProject", { name: project.alias || getProjectName(project.path) }));
     setConfirmCallback(() => async () => {
       try {
         await removeProject(ws.name, project.id);
       } catch (e) {
-        toast.error(`移除失败: ${e}`);
+        toast.error(t("removeFailed", { error: e }));
       }
     });
     setConfirmOpen(true);
@@ -245,7 +246,7 @@ export default function WorkspaceTree({
       await updateProjectAlias(aliasWorkspaceName, aliasProjectId, aliasValue.trim() || null);
       setAliasDialogOpen(false);
     } catch (e) {
-      toast.error(`设置别名失败: ${e}`);
+      toast.error(t("setAliasFailed", { error: e }));
     }
   }
 
@@ -260,7 +261,7 @@ export default function WorkspaceTree({
       await updateWorkspaceAlias(wsAliasTargetName, wsAliasValue.trim() || null);
       setWsAliasDialogOpen(false);
     } catch (e) {
-      toast.error(`设置别名失败: ${e}`);
+      toast.error(t("setAliasFailed", { error: e }));
     }
   }
 
@@ -268,18 +269,18 @@ export default function WorkspaceTree({
 
   async function handleScanImport(ws: Workspace) {
     try {
-      const selected = await open({ directory: true, multiple: false, title: "选择要扫描的根目录" });
+      const selected = await open({ directory: true, multiple: false, title: t("selectScanRoot") });
       if (!selected) return;
       setScanTargetWorkspace(ws);
       const results = await scanDirectory(selected);
       if (results.length === 0) {
-        toast.info("未在该目录下发现任何 Git 仓库");
+        toast.info(t("noGitReposFound"));
         return;
       }
       setScanResults(results);
       setScanDialogOpen(true);
     } catch (e) {
-      toast.error(`扫描失败: ${e}`);
+      toast.error(t("scanFailed", { error: e }));
     }
   }
 
@@ -297,7 +298,7 @@ export default function WorkspaceTree({
       }
     }
     if (skipped > 0) {
-      toast.info(`导入完成: ${imported} 个成功, ${skipped} 个跳过（可能已存在）`);
+      toast.info(t("importDone", { imported, skipped }));
     }
   }
 
@@ -313,7 +314,7 @@ export default function WorkspaceTree({
       try {
         await addProject(gitCloneTargetWorkspace, clonedPath);
       } catch (e) {
-        toast.error(`添加项目失败: ${e}`);
+        toast.error(t("addProjectFailed", { error: e }));
       }
     }
   }
@@ -349,22 +350,22 @@ export default function WorkspaceTree({
 
   async function handleSetWorkspacePath(ws: Workspace) {
     try {
-      const selected = await open({ directory: true, multiple: false, title: "选择工作空间根目录" });
+      const selected = await open({ directory: true, multiple: false, title: t("selectWorkspaceRoot") });
       if (selected) {
         await updateWorkspacePath(ws.name, selected);
-        toast.success("工作空间路径已设置");
+        toast.success(t("workspacePathSet"));
       }
     } catch (e) {
-      toast.error(`设置路径失败: ${e}`);
+      toast.error(t("setPathFailed", { error: e }));
     }
   }
 
   async function handleClearWorkspacePath(ws: Workspace) {
     try {
       await updateWorkspacePath(ws.name, null);
-      toast.success("工作空间路径已清除");
+      toast.success(t("workspacePathCleared"));
     } catch (e) {
-      toast.error(`清除路径失败: ${e}`);
+      toast.error(t("clearPathFailed", { error: e }));
     }
   }
 
@@ -372,7 +373,7 @@ export default function WorkspaceTree({
     try {
       await updateWorkspaceProvider(ws.name, providerId);
     } catch (e) {
-      toast.error(`设置 Provider 失败: ${e}`);
+      toast.error(t("setProviderFailed", { error: e }));
     }
   }
 
@@ -390,16 +391,16 @@ export default function WorkspaceTree({
     try {
       await openPath(path);
     } catch (e) {
-      toast.error(`打开文件夹失败: ${e}`);
+      toast.error(t("openFolderFailed", { error: e }));
     }
   }
 
   async function handleCopyPath(path: string) {
     try {
       await navigator.clipboard.writeText(path);
-      toast.success("已复制到剪贴板");
+      toast.success(t("copiedToClipboard"));
     } catch (e) {
-      toast.error(`复制失败: ${e}`);
+      toast.error(t("copyFailed", { error: e }));
     }
   }
 
@@ -423,7 +424,7 @@ export default function WorkspaceTree({
       }
       await fetchHookStatuses(projectPath);
     } catch (e) {
-      toast.error(`Hook 操作失败: ${e}`);
+      toast.error(t("hookOperationFailed", { error: e }));
     }
   }
 
@@ -492,13 +493,13 @@ export default function WorkspaceTree({
                   </span>
                 </button>
               </ContextMenuTrigger>
-              <ContextMenuContent className="w-40">
+              <ContextMenuContent className="w-48">
                 <ContextMenuItem disabled={ws.projects.length === 0} onClick={() => handleOpenWorkspace(ws)}>
-                  <Terminal size={14} className="mr-2" /> {t("openTerminal")}
+                  <Terminal /> {t("openTerminal")}
                 </ContextMenuItem>
                 <ContextMenuSub>
                   <ContextMenuSubTrigger disabled={ws.projects.length === 0}>
-                    <Terminal size={14} className="mr-2" /> {t("openClaudeCode")}
+                    <Terminal /> {t("openClaudeCode")}
                   </ContextMenuSubTrigger>
                   <ContextMenuSubContent className="w-48">
                     <ContextMenuItem onClick={() => handleOpenClaudeWorkspace(ws)}>
@@ -526,11 +527,11 @@ export default function WorkspaceTree({
                   disabled={!ws.path && ws.projects.length === 0}
                   onClick={() => handleRevealFolder(ws.path || ws.projects[0]?.path)}
                 >
-                  <FolderOpen size={14} className="mr-2" /> {t("openFolder")}
+                  <FolderOpen /> {t("openFolder")}
                 </ContextMenuItem>
                 <ContextMenuSub>
                   <ContextMenuSubTrigger disabled={!ws.path && ws.projects.length === 0}>
-                    <Copy size={14} className="mr-2" /> {t("copyPath")}
+                    <Copy /> {t("copyPath")}
                   </ContextMenuSubTrigger>
                   <ContextMenuSubContent>
                     <ContextMenuItem onClick={() => handleCopyPath(ws.path || ws.projects[0]?.path)}>
@@ -543,27 +544,30 @@ export default function WorkspaceTree({
                 </ContextMenuSub>
                 <ContextMenuSeparator />
                 <ContextMenuItem onClick={() => onOpenJournal(ws.name)}>
-                  <FileText size={14} className="mr-2" /> {t("sessionJournal")}
+                  <FileText /> {t("sessionJournal")}
                 </ContextMenuItem>
                 <ContextMenuItem onClick={() => onOpenSessionCleaner(ws.name)}>
-                  <ShieldCheck size={14} className="mr-2" /> {t("sessionCleaner")}
+                  <ShieldCheck /> {t("sessionCleaner")}
                 </ContextMenuItem>
                 <ContextMenuItem onClick={() => onOpenTodo("workspace", ws.name)}>
-                  <ListTodo size={14} className="mr-2" /> {t("todoList")}
+                  <ListTodo /> {t("todoList")}
                 </ContextMenuItem>
                 <ContextMenuSub>
                   <ContextMenuSubTrigger
                     disabled={!ws.path && ws.projects.length === 0}
                     onPointerEnter={() => fetchHookStatuses(ws.path || ws.projects[0]?.path)}
                   >
-                    <Plug size={14} className="mr-2" /> {t("hooks")}
+                    <Plug /> {t("hooks")}
                   </ContextMenuSubTrigger>
                   <ContextMenuSubContent>
                     {(hookStatuses[ws.path || ws.projects[0]?.path] || []).map((hook) => (
-                      <ContextMenuItem key={hook.name} onClick={() => handleToggleHook(ws.path || ws.projects[0]?.path, hook)}>
-                        {hook.enabled ? <Check size={14} className="mr-2" /> : <span className="w-[14px] mr-2" />}
+                      <ContextMenuCheckboxItem
+                        key={hook.name}
+                        checked={hook.enabled}
+                        onClick={() => handleToggleHook(ws.path || ws.projects[0]?.path, hook)}
+                      >
                         {getHookLabel(hook)}
-                      </ContextMenuItem>
+                      </ContextMenuCheckboxItem>
                     ))}
                     {(!hookStatuses[ws.path || ws.projects[0]?.path] || hookStatuses[ws.path || ws.projects[0]?.path].length === 0) && (
                       <ContextMenuItem disabled>Loading...</ContextMenuItem>
@@ -572,48 +576,48 @@ export default function WorkspaceTree({
                 </ContextMenuSub>
                 <ContextMenuSub>
                   <ContextMenuSubTrigger>
-                    <Cloud size={14} className="mr-2" /> Provider
+                    <Cloud /> Provider
                   </ContextMenuSubTrigger>
                   <ContextMenuSubContent className="w-44">
-                    <ContextMenuItem onClick={() => handleSetWorkspaceProvider(ws, null)}>
-                      {!ws.providerId ? <Check size={14} className="mr-2" /> : <span className="mr-2 w-[14px]" />}
-                      {t("noProvider")}
-                    </ContextMenuItem>
-                    {providerList.length > 0 && <ContextMenuSeparator />}
-                    {providerList.map((p) => (
-                      <ContextMenuItem key={p.id} onClick={() => handleSetWorkspaceProvider(ws, p.id)}>
-                        {ws.providerId === p.id ? <Check size={14} className="mr-2" /> : <span className="mr-2 w-[14px]" />}
-                        {p.name}
-                      </ContextMenuItem>
-                    ))}
+                    <ContextMenuRadioGroup value={ws.providerId ?? ""}>
+                      <ContextMenuRadioItem value="" onClick={() => handleSetWorkspaceProvider(ws, null)}>
+                        {t("noProvider")}
+                      </ContextMenuRadioItem>
+                      {providerList.length > 0 && <ContextMenuSeparator />}
+                      {providerList.map((p) => (
+                        <ContextMenuRadioItem key={p.id} value={p.id} onClick={() => handleSetWorkspaceProvider(ws, p.id)}>
+                          {p.name}
+                        </ContextMenuRadioItem>
+                      ))}
+                    </ContextMenuRadioGroup>
                   </ContextMenuSubContent>
                 </ContextMenuSub>
                 <ContextMenuSeparator />
                 <ContextMenuItem onClick={() => handleSetWorkspacePath(ws)}>
-                  <FolderRoot size={14} className="mr-2" /> {t("setWorkspacePath")}
+                  <FolderRoot /> {t("setWorkspacePath")}
                 </ContextMenuItem>
                 {ws.path && (
                   <ContextMenuItem onClick={() => handleClearWorkspacePath(ws)}>
-                    <X size={14} className="mr-2" /> {t("clearWorkspacePath")}
+                    <X /> {t("clearWorkspacePath")}
                   </ContextMenuItem>
                 )}
                 <ContextMenuSeparator />
                 <ContextMenuItem onClick={() => handleScanImport(ws)}>
-                  <FolderSearch size={14} className="mr-2" /> {t("importFromDir")}
+                  <FolderSearch /> {t("importFromDir")}
                 </ContextMenuItem>
                 <ContextMenuItem onClick={() => handleGitClone(ws)}>
-                  <GitBranch size={14} className="mr-2" /> {t("cloneFromGit")}
+                  <GitBranch /> {t("cloneFromGit")}
                 </ContextMenuItem>
                 <ContextMenuSeparator />
                 <ContextMenuItem onClick={() => handleSetWorkspaceAlias(ws)}>
-                  <Pencil size={14} className="mr-2" /> {t("setAlias")}
+                  <Pencil /> {t("setAlias")}
                 </ContextMenuItem>
                 <ContextMenuItem onClick={() => handleRenameWorkspace(ws)}>
-                  <Pencil size={14} className="mr-2" /> {t("renameWorkspace")}
+                  <Pencil /> {t("renameWorkspace")}
                 </ContextMenuItem>
                 <ContextMenuSeparator />
-                <ContextMenuItem className="text-destructive" onClick={() => handleDeleteWorkspace(ws)}>
-                  <Trash2 size={14} className="mr-2" /> {t("deleteWorkspace")}
+                <ContextMenuItem variant="destructive" onClick={() => handleDeleteWorkspace(ws)}>
+                  <Trash2 /> {t("deleteWorkspace")}
                 </ContextMenuItem>
               </ContextMenuContent>
             </ContextMenu>
@@ -648,13 +652,13 @@ export default function WorkspaceTree({
                           )}
                         </div>
                       </ContextMenuTrigger>
-                      <ContextMenuContent className="w-44">
+                      <ContextMenuContent className="w-48">
                         <ContextMenuItem onClick={() => handleOpenProject(project, ws)}>
-                          <Terminal size={14} className="mr-2" /> {t("openTerminal")}
+                          <Terminal /> {t("openTerminal")}
                         </ContextMenuItem>
                         <ContextMenuSub>
                           <ContextMenuSubTrigger>
-                            <Terminal size={14} className="mr-2" /> {t("openClaudeCode")}
+                            <Terminal /> {t("openClaudeCode")}
                           </ContextMenuSubTrigger>
                           <ContextMenuSubContent className="w-48">
                             <ContextMenuItem onClick={() => handleOpenClaudeProject(project, ws)}>
@@ -679,11 +683,11 @@ export default function WorkspaceTree({
                           </ContextMenuSubContent>
                         </ContextMenuSub>
                         <ContextMenuItem onClick={() => handleRevealFolder(project.path)}>
-                          <FolderOpen size={14} className="mr-2" /> {t("openFolder")}
+                          <FolderOpen /> {t("openFolder")}
                         </ContextMenuItem>
                         <ContextMenuSub>
                           <ContextMenuSubTrigger>
-                            <Copy size={14} className="mr-2" /> {t("copyPath")}
+                            <Copy /> {t("copyPath")}
                           </ContextMenuSubTrigger>
                           <ContextMenuSubContent>
                             <ContextMenuItem onClick={() => handleCopyPath(project.path)}>
@@ -696,20 +700,20 @@ export default function WorkspaceTree({
                         </ContextMenuSub>
                         <ContextMenuSeparator />
                         <ContextMenuItem onClick={() => handleSetAlias(ws, project)}>
-                          <Pencil size={14} className="mr-2" /> {t("setAlias")}
+                          <Pencil /> {t("setAlias")}
                         </ContextMenuItem>
                         <ContextMenuItem onClick={() => onOpenHistory(project.path)}>
-                          <Clock size={14} className="mr-2" /> {t("fileHistory")}
+                          <Clock /> {t("fileHistory")}
                         </ContextMenuItem>
                         <ContextMenuItem onClick={() => onOpenPlans(project.path)}>
-                          <FileStack size={14} className="mr-2" /> {t("planArchive")}
+                          <FileStack /> {t("planArchive")}
                         </ContextMenuItem>
                         <ContextMenuItem onClick={() => handleOpenWorktreeManager(project, ws)}>
-                          <GitBranch size={14} className="mr-2" /> {t("worktreeManager")}
+                          <GitBranch /> {t("worktreeManager")}
                         </ContextMenuItem>
                         <ContextMenuSeparator />
-                        <ContextMenuItem className="text-destructive" onClick={() => handleRemoveProject(ws, project)}>
-                          <Trash2 size={14} className="mr-2" /> {t("removeProject")}
+                        <ContextMenuItem variant="destructive" onClick={() => handleRemoveProject(ws, project)}>
+                          <Trash2 /> {t("removeProject")}
                         </ContextMenuItem>
                       </ContextMenuContent>
                     </ContextMenu>
@@ -737,16 +741,16 @@ export default function WorkspaceTree({
                                 )}
                               </div>
                             </ContextMenuTrigger>
-                            <ContextMenuContent className="w-44">
+                            <ContextMenuContent className="w-48">
                               <ContextMenuItem onClick={() => handleOpenWorktree(wt.path, ws)}>
-                                <Terminal size={14} className="mr-2" /> {t("openTerminal")}
+                                <Terminal /> {t("openTerminal")}
                               </ContextMenuItem>
                               <ContextMenuItem onClick={() => handleRevealFolder(wt.path)}>
-                                <FolderOpen size={14} className="mr-2" /> {t("openFolder")}
+                                <FolderOpen /> {t("openFolder")}
                               </ContextMenuItem>
                               <ContextMenuSeparator />
                               <ContextMenuItem onClick={() => handleOpenWorktreeManager(project, ws)}>
-                                <GitBranch size={14} className="mr-2" /> {t("worktreeManager")}
+                                <GitBranch /> {t("worktreeManager")}
                               </ContextMenuItem>
                             </ContextMenuContent>
                           </ContextMenu>

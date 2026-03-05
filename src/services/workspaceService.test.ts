@@ -204,27 +204,37 @@ describe("workspaceService", () => {
   });
 
   describe("updateWorkspacePinned", () => {
-    it("应该调用 update_workspace_pinned 命令", async () => {
-      mockTauriInvoke({ update_workspace_pinned: undefined });
+    it("应该先获取工作空间再调用 update_workspace 命令", async () => {
+      const workspace = createTestWorkspace({ name: "ws-1" });
+      mockTauriInvoke({
+        get_workspace: workspace,
+        update_workspace: undefined,
+      });
 
       await updateWorkspacePinned("ws-1", true);
 
-      expect(invoke).toHaveBeenCalledWith("update_workspace_pinned", {
+      expect(invoke).toHaveBeenCalledWith("get_workspace", { name: "ws-1" });
+      expect(invoke).toHaveBeenCalledWith("update_workspace", {
         name: "ws-1",
-        pinned: true,
+        workspace: { ...workspace, pinned: true },
       });
     });
   });
 
   describe("updateWorkspaceHidden", () => {
-    it("应该调用 update_workspace_hidden 命令", async () => {
-      mockTauriInvoke({ update_workspace_hidden: undefined });
+    it("应该先获取工作空间再调用 update_workspace 命令", async () => {
+      const workspace = createTestWorkspace({ name: "ws-1" });
+      mockTauriInvoke({
+        get_workspace: workspace,
+        update_workspace: undefined,
+      });
 
       await updateWorkspaceHidden("ws-1", true);
 
-      expect(invoke).toHaveBeenCalledWith("update_workspace_hidden", {
+      expect(invoke).toHaveBeenCalledWith("get_workspace", { name: "ws-1" });
+      expect(invoke).toHaveBeenCalledWith("update_workspace", {
         name: "ws-1",
-        hidden: true,
+        workspace: { ...workspace, hidden: true },
       });
     });
   });

@@ -9,6 +9,9 @@ interface WorkspacesState {
   loading: boolean;
   selectedWorkspace: () => Workspace | undefined;
   selectedProject: () => WorkspaceProject | null;
+  pinnedWorkspaces: () => Workspace[];
+  unpinnedVisibleWorkspaces: () => Workspace[];
+  hiddenWorkspaces: () => Workspace[];
   load: () => Promise<void>;
   create: (name: string, path: string) => Promise<Workspace>;
   rename: (oldName: string, newName: string) => Promise<void>;
@@ -19,6 +22,9 @@ interface WorkspacesState {
   updateWorkspaceAlias: (workspaceName: string, alias: string | null) => Promise<void>;
   updateWorkspaceProvider: (workspaceName: string, providerId: string | null) => Promise<void>;
   updateWorkspacePath: (workspaceName: string, path: string | null) => Promise<void>;
+  updatePinned: (name: string, pinned: boolean) => Promise<void>;
+  updateHidden: (name: string, hidden: boolean) => Promise<void>;
+  reorder: (orderedNames: string[]) => Promise<void>;
   expandWorkspace: (id: string | null) => void;
   expandProject: (id: string | null) => void;
 }
@@ -39,6 +45,18 @@ export const useWorkspacesStore = create<WorkspacesState>((set, get) => ({
     const pid = get().expandedProjectId;
     if (!ws || !pid) return null;
     return ws.projects.find((p) => p.id === pid) ?? null;
+  },
+
+  pinnedWorkspaces: () => {
+    return get().workspaces.filter((ws) => ws.pinned);
+  },
+
+  unpinnedVisibleWorkspaces: () => {
+    return get().workspaces.filter((ws) => !ws.pinned && !ws.hidden);
+  },
+
+  hiddenWorkspaces: () => {
+    return get().workspaces.filter((ws) => ws.hidden);
   },
 
   load: async () => {
@@ -131,7 +149,7 @@ export const useWorkspacesStore = create<WorkspacesState>((set, get) => ({
     set((state) => ({
       workspaces: state.workspaces.map((ws) =>
         ws.name === workspaceName
-          ? { ...ws, provider_id: providerId ?? undefined }
+          ? { ...ws, providerId: providerId ?? undefined }
           : ws
       ),
     }));
@@ -144,6 +162,38 @@ export const useWorkspacesStore = create<WorkspacesState>((set, get) => ({
         ws.name === workspaceName ? { ...ws, path: path ?? undefined } : ws
       ),
     }));
+  },
+
+  updatePinned: async (name, pinned) => {
+    await workspaceService.updateWorkspacePinned(name, pinned);
+    set((state) => ({
+      workspaces: state.workspaces.map((ws) =>
+        ws.name === name ? { ...ws, pinned } : ws
+      ),
+    }));
+  },
+
+  updateHidden: async (name, hidden) => {
+    await workspaceService.updateWorkspaceHidden(name, hidden);
+    set((state) => ({
+      workspaces: state.workspaces.map((ws) =>
+        ws.name === name ? { ...ws, hidden } : ws
+      ),
+    }));
+  },
+
+  reorder: async (orderedNames) => {
+    await workspaceService.reorderWorkspaces(orderedNames);
+    set((state) => {
+      const wsMap = new Map(state.workspaces.map((ws) => [ws.name, ws]));
+      const ordered = orderedNames
+        .map((name) => wsMap.get(name))
+        .filter((ws): ws is Workspace => ws !== undefined);
+      // 追加未在 orderedNames 中的工作空间
+      const orderedSet = new Set(orderedNames);
+      const remaining = state.workspaces.filter((ws) => !orderedSet.has(ws.name));
+      return { workspaces: [...ordered, ...remaining] };
+    });
   },
 
   expandWorkspace: (id) => {

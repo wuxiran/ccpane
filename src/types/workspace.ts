@@ -12,4 +12,6 @@ export interface Workspace {
   projects: WorkspaceProject[];
   providerId?: string;
   path?: string;
+  pinned?: boolean;
+  hidden?: boolean;
 }

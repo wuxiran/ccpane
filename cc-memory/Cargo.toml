@@ -1,6 +1,6 @@
 [package]
 name = "cc-memory"
-version = "0.1.0"
+version = "0.94.0"
 edition = "2021"
 description = "Memory system for CC-Panes"
 

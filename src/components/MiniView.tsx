@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { invoke } from "@tauri-apps/api/core";
 import { Maximize2, Pin } from "lucide-react";
 import { usePanesStore, useTerminalStatusStore, useMiniModeStore } from "@/stores";
@@ -7,6 +8,7 @@ import type { Tab } from "@/types";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 
 export default function MiniView() {
+  const { t } = useTranslation("common");
   const rootPane = usePanesStore((s) => s.rootPane);
   const allPanels = usePanesStore((s) => s.allPanels);
   const getStatus = useTerminalStatusStore((s) => s.getStatus);
@@ -69,7 +71,7 @@ export default function MiniView() {
               color: isPinned ? "var(--app-accent)" : "var(--app-text-secondary)",
             }}
             onClick={(e) => { e.stopPropagation(); togglePin(); }}
-            title={isPinned ? "取消置顶" : "窗口置顶"}
+            title={isPinned ? t("miniUnpin") : t("miniPin")}
           >
             <Pin size={10} className={isPinned ? "rotate-45" : ""} />
           </button>
@@ -77,7 +79,7 @@ export default function MiniView() {
             className="flex items-center justify-center w-[18px] h-[18px] rounded-[3px] border-none cursor-pointer transition-all hover:bg-[var(--app-hover)]"
             style={{ background: "transparent", color: "var(--app-text-secondary)" }}
             onClick={(e) => { e.stopPropagation(); handleRestore(); }}
-            title="恢复窗口"
+            title={t("miniRestore")}
           >
             <Maximize2 size={10} />
           </button>
@@ -101,7 +103,7 @@ export default function MiniView() {
         ))}
         {activeTabs.length === 0 && (
           <div className="col-span-2 flex items-center justify-center text-[11px] py-4" style={{ color: "var(--app-text-tertiary)" }}>
-            无活跃会话
+            {t("miniNoActiveSessions")}
           </div>
         )}
       </div>

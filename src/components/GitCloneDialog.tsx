@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { open } from "@tauri-apps/plugin-dialog";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { toast } from "sonner";
@@ -41,6 +42,7 @@ export default function GitCloneDialog({
   workspaceName,
   onCloned,
 }: GitCloneDialogProps) {
+  const { t } = useTranslation(["dialogs", "common"]);
   const [url, setUrl] = useState("");
   const [parentDir, setParentDir] = useState("");
   const [folderName, setFolderName] = useState("");
@@ -77,12 +79,12 @@ export default function GitCloneDialog({
 
   async function handleSelectDir() {
     try {
-      const selected = await open({ directory: true, multiple: false, title: "选择克隆到的目录" });
+      const selected = await open({ directory: true, multiple: false, title: t("selectCloneDir") });
       if (selected) {
         setParentDir(selected);
       }
     } catch (e) {
-      toast.error(`选择目录失败: ${e}`);
+      toast.error(t("cloneSelectDirFailed", { error: e }));
     }
   }
 
@@ -93,7 +95,7 @@ export default function GitCloneDialog({
 
   async function handleClone() {
     if (!url.trim() || !parentDir.trim() || !folderName.trim()) {
-      toast.error("请填写完整的 URL、目标目录和项目文件夹名");
+      toast.error(t("cloneFieldsRequired"));
       return;
     }
 
@@ -113,11 +115,11 @@ export default function GitCloneDialog({
         username: username || undefined,
         password: password || undefined,
       });
-      toast.success("克隆成功");
+      toast.success(t("cloneSuccess"));
       onCloned(clonedPath);
       onOpenChange(false);
     } catch (e) {
-      toast.error(`克隆失败: ${e}`);
+      toast.error(t("cloneFailed", { error: e }));
     } finally {
       unlisten();
       setCloning(false);
@@ -130,13 +132,13 @@ export default function GitCloneDialog({
     <Dialog open={isOpen} onOpenChange={(v) => { if (!cloning) onOpenChange(v); }}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>克隆到「{workspaceName}」</DialogTitle>
+          <DialogTitle>{t("gitCloneTitle", { name: workspaceName })}</DialogTitle>
         </DialogHeader>
 
         <div className="flex flex-col gap-4 py-2">
           {/* 仓库 URL */}
           <div className="flex flex-col gap-1.5">
-            <Label className="text-xs">仓库 URL</Label>
+            <Label className="text-xs">{t("repoUrl")}</Label>
             <Input
               value={url}
               onChange={(e) => setUrl(e.target.value)}
@@ -147,12 +149,12 @@ export default function GitCloneDialog({
 
           {/* 克隆到目录 */}
           <div className="flex flex-col gap-1.5">
-            <Label className="text-xs">克隆到目录</Label>
+            <Label className="text-xs">{t("cloneDir")}</Label>
             <div className="flex gap-2">
               <Input
                 value={parentDir}
                 onChange={(e) => setParentDir(e.target.value)}
-                placeholder="选择父目录"
+                placeholder={t("selectParentDir")}
                 className="flex-1"
                 disabled={cloning}
               />
@@ -169,16 +171,16 @@ export default function GitCloneDialog({
 
           {/* 项目文件夹名 */}
           <div className="flex flex-col gap-1.5">
-            <Label className="text-xs">项目文件夹名</Label>
+            <Label className="text-xs">{t("projectFolderName")}</Label>
             <Input
               value={folderName}
               onChange={(e) => handleFolderNameChange(e.target.value)}
-              placeholder="从 URL 自动推导"
+              placeholder={t("autoDerive")}
               disabled={cloning}
             />
             {parentDir && folderName && (
               <span className="text-[11px]" style={{ color: "var(--app-text-tertiary)" }}>
-                克隆到: {parentDir.replace(/[\\/]$/, "")}\{folderName}
+                {t("cloneTo", { path: `${parentDir.replace(/[\\/]$/, "")}\\${folderName}` })}
               </span>
             )}
           </div>
@@ -196,7 +198,7 @@ export default function GitCloneDialog({
               disabled={cloning}
             />
             <span className="text-xs" style={{ color: "var(--app-text-secondary)" }}>
-              浅克隆（仅最近历史，加速大仓库）
+              {t("shallowClone")}
             </span>
           </div>
 
@@ -207,27 +209,27 @@ export default function GitCloneDialog({
               onClick={() => setShowAuth(!showAuth)}
             >
               <span className="text-xs font-medium" style={{ color: "var(--app-text-tertiary)" }}>
-                {showAuth ? "▾" : "▸"} 认证（私有仓库选填）
+                {showAuth ? "▾" : "▸"} {t("authOptional")}
               </span>
             </div>
             {showAuth && (
               <div className="flex flex-col gap-2 pl-4">
                 <div className="flex flex-col gap-1">
-                  <Label className="text-xs">用户名</Label>
+                  <Label className="text-xs">{t("authUsername")}</Label>
                   <Input
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
-                    placeholder="用户名"
+                    placeholder={t("authUsername")}
                     disabled={cloning}
                   />
                 </div>
                 <div className="flex flex-col gap-1">
-                  <Label className="text-xs">密码 / Token</Label>
+                  <Label className="text-xs">{t("authPassword")}</Label>
                   <Input
                     type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="密码或 Personal Access Token"
+                    placeholder={t("authPasswordPlaceholder")}
                     disabled={cloning}
                   />
                 </div>
@@ -248,7 +250,7 @@ export default function GitCloneDialog({
                 />
               </div>
               <span className="text-[11px] truncate" style={{ color: "var(--app-text-tertiary)" }}>
-                {progress?.message || "正在克隆..."}
+                {progress?.message || t("cloning")}
               </span>
             </div>
           )}
@@ -256,10 +258,10 @@ export default function GitCloneDialog({
 
         <DialogFooter>
           <Button variant="secondary" onClick={() => onOpenChange(false)} disabled={cloning}>
-            取消
+            {t("common:cancel")}
           </Button>
           <Button onClick={handleClone} disabled={!canClone}>
-            {cloning ? "克隆中..." : "克隆"}
+            {cloning ? t("cloningBtn") : t("cloneBtn")}
           </Button>
         </DialogFooter>
       </DialogContent>

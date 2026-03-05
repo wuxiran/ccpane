@@ -57,8 +57,22 @@ impl WorkspaceService {
             }
         }
 
-        // 按创建时间排序
-        workspaces.sort_by(|a, b| a.created_at.cmp(&b.created_at));
+        // 排序：pinned 优先 → sort_order 升序 → 创建时间升序
+        workspaces.sort_by(|a, b| {
+            // pinned 在前
+            b.pinned.cmp(&a.pinned)
+                // sort_order 升序（None 排在最后）
+                .then_with(|| {
+                    match (a.sort_order, b.sort_order) {
+                        (Some(sa), Some(sb)) => sa.cmp(&sb),
+                        (Some(_), None) => std::cmp::Ordering::Less,
+                        (None, Some(_)) => std::cmp::Ordering::Greater,
+                        (None, None) => std::cmp::Ordering::Equal,
+                    }
+                })
+                // 最后按创建时间
+                .then_with(|| a.created_at.cmp(&b.created_at))
+        });
         Ok(workspaces)
     }
 
@@ -112,7 +126,7 @@ impl WorkspaceService {
         }
 
         if new_dir.exists() {
-            return Err(format!("Workspace '{}' already exists", new_name));
+            return Err(format!("WORKSPACE_NAME_DUPLICATE: Workspace '{}' already exists", new_name));
         }
 
         // 重命名目录
@@ -147,7 +161,7 @@ impl WorkspaceService {
 
         // 检查路径是否已存在
         if workspace.projects.iter().any(|p| p.path == path) {
-            return Err(format!("Project path '{}' already exists in workspace", path));
+            return Err(format!("PROJECT_ALREADY_EXISTS: Project path '{}' already exists in workspace", path));
         }
 
         let project = WorkspaceProject::new(path.to_string());
@@ -236,6 +250,47 @@ impl WorkspaceService {
         Ok(())
     }
 
+    /// 更新工作空间 pinned 状态
+    pub fn update_workspace_pinned(&self, name: &str, pinned: bool) -> Result<(), String> {
+        let mut ws = self.get_workspace(name)?;
+        ws.pinned = pinned;
+        self.write_workspace_json(name, &ws)?;
+        Ok(())
+    }
+
+    /// 更新工作空间 hidden 状态
+    pub fn update_workspace_hidden(&self, name: &str, hidden: bool) -> Result<(), String> {
+        let mut ws = self.get_workspace(name)?;
+        ws.hidden = hidden;
+        self.write_workspace_json(name, &ws)?;
+        Ok(())
+    }
+
+    /// 重排工作空间顺序
+    pub fn reorder_workspaces(&self, ordered_names: Vec<String>) -> Result<(), String> {
+        if ordered_names.is_empty() {
+            return Err("Ordered names cannot be empty".to_string());
+        }
+        // 检查重复
+        let mut seen = std::collections::HashSet::new();
+        for name in &ordered_names {
+            if !seen.insert(name) {
+                return Err(format!("Duplicate workspace name: {}", name));
+            }
+        }
+        // 验证所有名称都存在
+        for name in &ordered_names {
+            self.get_workspace(name)?;
+        }
+        // 更新每个 workspace 的 sort_order
+        for (i, name) in ordered_names.iter().enumerate() {
+            let mut ws = self.get_workspace(name)?;
+            ws.sort_order = Some(i as i32);
+            self.write_workspace_json(name, &ws)?;
+        }
+        Ok(())
+    }
+
     // ============ 私有方法 ============
 
     fn read_workspace_json(&self, path: &PathBuf) -> Result<Workspace, String> {
@@ -246,7 +301,7 @@ impl WorkspaceService {
             .map_err(|e| format!("Failed to parse JSON: {}", e))
     }
 
-    fn write_workspace_json(&self, name: &str, workspace: &Workspace) -> Result<(), String> {
+    pub fn write_workspace_json(&self, name: &str, workspace: &Workspace) -> Result<(), String> {
         let json_path = self.workspace_json_path(name);
         let content = serde_json::to_string_pretty(workspace)
             .map_err(|e| format!("Failed to serialize JSON: {}", e))?;

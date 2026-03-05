@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { History, RotateCcw, FileText, Clock, Tag, Trash2, Diff, Code, GitBranch, ChevronLeft, FolderOpen } from "lucide-react";
 import {
@@ -48,6 +49,7 @@ export default function LocalHistoryPanel({
   filePath,
   onRestored,
 }: LocalHistoryPanelProps) {
+  const { t } = useTranslation(["dialogs", "common"]);
   const [versions, setVersions] = useState<FileVersion[]>([]);
   const [labels, setLabels] = useState<HistoryLabel[]>([]);
   const [loading, setLoading] = useState(false);
@@ -224,7 +226,7 @@ export default function LocalHistoryPanel({
           setDiffResult(result);
         } else {
           // 最早的版本，没有更早版本可比较 → 与当前磁盘文件比较作为 fallback
-          setDiffDescription("最早版本 → 当前文件");
+          setDiffDescription(t("diffEarliestToCurrent"));
           const result = await localHistoryService.getVersionDiff(projectPath, effectiveFilePath, version.id);
           if (requestId !== selectRequestIdRef.current) return;
           setDiffResult(result);
@@ -237,7 +239,7 @@ export default function LocalHistoryPanel({
     } catch (e) {
       if (requestId !== selectRequestIdRef.current) return;
       console.error("Failed to load version:", e);
-      setVersionContent("加载失败");
+      setVersionContent(t("loadFailed"));
     } finally {
       setLoadingContent(false);
     }
@@ -251,7 +253,7 @@ export default function LocalHistoryPanel({
       onOpenChange(false);
     } catch (e) {
       console.error("Failed to restore version:", e);
-      toast.error("恢复失败: " + getErrorMessage(e));
+      toast.error(t("restoreFailed", { error: getErrorMessage(e) }));
     }
   }
 
@@ -291,17 +293,17 @@ export default function LocalHistoryPanel({
       setLabelDialogOpen(false);
     } catch (e) {
       console.error("Failed to add label:", e);
-      toast.error("添加标签失败: " + getErrorMessage(e));
+      toast.error(t("addTagFailed", { error: getErrorMessage(e) }));
     }
   }
 
   async function restoreDeletedFile(file: FileVersion) {
     try {
       await localHistoryService.restoreFileVersion(projectPath, file.filePath, file.id);
-      toast.success(`文件 ${file.filePath} 已恢复`);
+      toast.success(t("fileRestored", { path: file.filePath }));
       await loadDeletedFiles();
     } catch (e) {
-      toast.error("恢复失败: " + getErrorMessage(e));
+      toast.error(t("restoreFailed", { error: getErrorMessage(e) }));
     }
   }
 
@@ -344,7 +346,7 @@ export default function LocalHistoryPanel({
                 </Button>
               )}
               <History size={18} />
-              文件历史{effectiveFilePath ? ` - ${effectiveFilePath}` : ""}
+              {effectiveFilePath ? t("localHistoryTitle", { path: effectiveFilePath }) : t("localHistoryTitleNoPath")}
             </DialogTitle>
           </DialogHeader>
 
@@ -352,13 +354,13 @@ export default function LocalHistoryPanel({
             <div className="max-h-[600px] overflow-y-auto">
               {fileListLoading ? (
                 <div className="flex flex-col items-center justify-center py-16 gap-3" style={{ color: "var(--app-text-tertiary)" }}>
-                  <p>加载文件列表...</p>
+                  <p>{t("loadingFileList")}</p>
                 </div>
               ) : recentChanges.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-16 gap-3" style={{ color: "var(--app-text-tertiary)" }}>
                   <FileText size={48} />
-                  <p>暂无文件历史记录</p>
-                  <p className="text-xs opacity-70">项目中的文件变更将自动记录</p>
+                  <p>{t("noFileHistory")}</p>
+                  <p className="text-xs opacity-70">{t("autoTrackChanges")}</p>
                 </div>
               ) : (
                 recentChanges.map((change) => (
@@ -399,16 +401,16 @@ export default function LocalHistoryPanel({
               <div className="flex items-center justify-between gap-2 mb-2">
                 <div className="flex gap-1">
                   <Button size="sm" variant={viewMode === "diff" ? "default" : "ghost"} onClick={() => switchViewMode("diff")}>
-                    <Diff size={14} className="mr-1" /> 差异
+                    <Diff size={14} className="mr-1" /> {t("diff")}
                   </Button>
                   <Button size="sm" variant={viewMode === "content" ? "default" : "ghost"} onClick={() => switchViewMode("content")}>
-                    <Code size={14} className="mr-1" /> 完整内容
+                    <Code size={14} className="mr-1" /> {t("fullContent")}
                   </Button>
                   <Button size="sm" variant={viewMode === "deleted" ? "default" : "ghost"} onClick={() => switchViewMode("deleted")}>
-                    <Trash2 size={14} className="mr-1" /> 已删除
+                    <Trash2 size={14} className="mr-1" /> {t("deleted")}
                   </Button>
                   <Button size="sm" variant={viewMode === "project-restore" ? "default" : "ghost"} onClick={() => switchViewMode("project-restore")}>
-                    <RotateCcw size={14} className="mr-1" /> 项目恢复
+                    <RotateCcw size={14} className="mr-1" /> {t("projectRestore")}
                   </Button>
                 </div>
 
@@ -420,8 +422,8 @@ export default function LocalHistoryPanel({
                       className="px-2 py-1 text-xs rounded-md outline-none max-w-[200px]"
                       style={{ border: "1px solid var(--app-border)", background: "var(--app-content)", color: "var(--app-text-primary)" }}
                     >
-                      <option value="">所有分支</option>
-                      {fileBranches.map((b) => <option key={b} value={b}>{b || "未知分支"}</option>)}
+                      <option value="">{t("allBranches")}</option>
+                      {fileBranches.map((b) => <option key={b} value={b}>{b || t("unknownBranch")}</option>)}
                     </select>
                   )}
                   {viewMode !== "deleted" && labels.length > 0 && (
@@ -431,7 +433,7 @@ export default function LocalHistoryPanel({
                       className="px-2 py-1 text-xs rounded-md outline-none max-w-[200px]"
                       style={{ border: "1px solid var(--app-border)", background: "var(--app-content)", color: "var(--app-text-primary)" }}
                     >
-                      <option value="">全部版本</option>
+                      <option value="">{t("allVersions")}</option>
                       {labels.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
                     </select>
                   )}
@@ -443,7 +445,7 @@ export default function LocalHistoryPanel({
                 <div className="h-[600px] overflow-y-auto rounded-lg p-2" style={{ border: "1px solid var(--app-border)" }}>
                   {projectLabels.length === 0 ? (
                     <div className="py-5 text-center" style={{ color: "var(--app-text-tertiary)" }}>
-                      暂无快照标签。启动 Claude Code 时会自动创建项目快照。
+                      {t("noSnapshots")}
                     </div>
                   ) : (
                     projectLabels.map((label) => (
@@ -454,14 +456,14 @@ export default function LocalHistoryPanel({
                             className="text-[10px] px-1.5 h-[18px] shrink-0"
                             style={{ borderColor: getLabelColor(label.source), color: getLabelColor(label.source) }}
                           >
-                            {label.source === "claude_session" ? "CC 会话" : label.source === "restore" ? "恢复" : label.source}
+                            {label.source === "claude_session" ? t("labelSourceClaudeSession") : label.source === "restore" ? t("labelSourceRestore") : label.source}
                           </Badge>
                           <span className="text-[13px] truncate" style={{ color: "var(--app-text-primary)" }}>{label.name}</span>
                           <span className="text-[11px] shrink-0" style={{ color: "var(--app-text-tertiary)" }} title={formatFullTime(label.timestamp)}>
                             {formatRelativeTime(label.timestamp)}
                           </span>
                           <span className="text-[11px] shrink-0" style={{ color: "var(--app-text-tertiary)" }}>
-                            {label.fileSnapshots.length} 个文件
+                            {t("fileCount", { count: label.fileSnapshots.length })}
                           </span>
                         </div>
                         <Button
@@ -469,21 +471,21 @@ export default function LocalHistoryPanel({
                           variant="outline"
                           disabled={restoring}
                           onClick={async () => {
-                            if (!confirm(`确定要将项目恢复到「${label.name}」的状态吗？\n\n这将恢复 ${label.fileSnapshots.length} 个文件。恢复前会自动创建当前状态的快照。`)) return;
+                            if (!confirm(t("confirmRestoreToLabel", { name: label.name, count: label.fileSnapshots.length }))) return;
                             setRestoring(true);
                             try {
                               const restored = await localHistoryService.restoreToLabel(projectPath, label.id);
-                              toast.success(`已恢复 ${restored.length} 个文件`);
+                              toast.success(t("filesRestored", { count: restored.length }));
                               onRestored?.();
                               await loadProjectLabels();
                             } catch (e) {
-                              toast.error("恢复失败: " + getErrorMessage(e));
+                              toast.error(t("restoreFailed", { error: getErrorMessage(e) }));
                             } finally {
                               setRestoring(false);
                             }
                           }}
                         >
-                          <RotateCcw size={12} className="mr-1" /> 恢复到此快照
+                          <RotateCcw size={12} className="mr-1" /> {t("restoreToSnapshot")}
                         </Button>
                       </div>
                     ))
@@ -492,7 +494,7 @@ export default function LocalHistoryPanel({
               ) : viewMode === "deleted" ? (
                 <div className="max-h-[600px] overflow-y-auto rounded-lg p-2" style={{ border: "1px solid var(--app-border)" }}>
                   {deletedFiles.length === 0 ? (
-                    <div className="py-5 text-center" style={{ color: "var(--app-text-tertiary)" }}>暂无已删除的文件</div>
+                    <div className="py-5 text-center" style={{ color: "var(--app-text-tertiary)" }}>{t("noDeletedFiles")}</div>
                   ) : (
                     deletedFiles.map((file) => (
                       <div key={file.id} className="flex items-center justify-between px-3 py-2.5 rounded-md mb-1 transition-colors hover:bg-[var(--app-hover)]">
@@ -505,7 +507,7 @@ export default function LocalHistoryPanel({
                           <span className="text-[11px] shrink-0" style={{ color: "var(--app-text-tertiary)" }}>{formatSize(file.size)}</span>
                         </div>
                         <Button size="sm" variant="outline" onClick={() => restoreDeletedFile(file)}>
-                          <RotateCcw size={12} className="mr-1" /> 恢复
+                          <RotateCcw size={12} className="mr-1" /> {t("common:restore")}
                         </Button>
                       </div>
                     ))
@@ -517,9 +519,9 @@ export default function LocalHistoryPanel({
                   {/* 左侧版本列表 */}
                   <div className="w-[260px] shrink-0 overflow-y-auto rounded-lg p-2" style={{ border: "1px solid var(--app-border)" }}>
                     {loading ? (
-                      <div className="py-5 text-center" style={{ color: "var(--app-text-tertiary)" }}>加载中...</div>
+                      <div className="py-5 text-center" style={{ color: "var(--app-text-tertiary)" }}>{t("common:loading")}</div>
                     ) : filteredVersions.length === 0 ? (
-                      <div className="py-5 text-center" style={{ color: "var(--app-text-tertiary)" }}>暂无历史版本</div>
+                      <div className="py-5 text-center" style={{ color: "var(--app-text-tertiary)" }}>{t("noHistory")}</div>
                     ) : (
                       filteredVersions.map((version) => (
                         <div
@@ -543,7 +545,7 @@ export default function LocalHistoryPanel({
                                 <GitBranch size={10} className="mr-1" />{version.branch}
                               </Badge>
                             ) : fileBranches.length > 1 ? (
-                              <span className="text-[10px] opacity-60">未知分支</span>
+                              <span className="text-[10px] opacity-60">{t("unknownBranch")}</span>
                             ) : null}
                           </div>
                           {getVersionLabels(version.id).length > 0 && (
@@ -570,12 +572,12 @@ export default function LocalHistoryPanel({
                     {!selectedVersion ? (
                       <div className="flex-1 flex flex-col items-center justify-center gap-3" style={{ color: "var(--app-text-tertiary)" }}>
                         <FileText size={48} />
-                        <p>选择一个版本查看内容</p>
-                        <p className="text-xs opacity-70">右键版本可添加标签</p>
+                        <p>{t("selectVersionToView")}</p>
+                        <p className="text-xs opacity-70">{t("rightClickForTag")}</p>
                       </div>
                     ) : loadingContent ? (
                       <div className="flex-1 flex items-center justify-center" style={{ color: "var(--app-text-tertiary)" }}>
-                        加载中...
+                        {t("common:loading")}
                       </div>
                     ) : viewMode === "diff" ? (
                       <div className="flex-1 flex flex-col overflow-hidden">
@@ -601,12 +603,12 @@ export default function LocalHistoryPanel({
               {selectedVersion && viewMode !== "deleted" && viewMode !== "project-restore" && (
                 <div className="flex justify-between items-center mt-4">
                   <Button variant="outline" size="sm" onClick={() => openLabelDialog(selectedVersion)}>
-                    <Tag size={14} className="mr-1" /> 添加标签
+                    <Tag size={14} className="mr-1" /> {t("addTag")}
                   </Button>
                   <div className="flex gap-2">
-                    <Button variant="outline" onClick={() => onOpenChange(false)}>取消</Button>
+                    <Button variant="outline" onClick={() => onOpenChange(false)}>{t("common:cancel")}</Button>
                     <Button onClick={restoreVersion}>
-                      <RotateCcw size={14} className="mr-2" /> 恢复此版本
+                      <RotateCcw size={14} className="mr-2" /> {t("restoreVersion")}
                     </Button>
                   </div>
                 </div>
@@ -620,19 +622,19 @@ export default function LocalHistoryPanel({
       <Dialog open={labelDialogOpen} onOpenChange={setLabelDialogOpen}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle>添加标签</DialogTitle>
+            <DialogTitle>{t("addTag")}</DialogTitle>
           </DialogHeader>
           <div className="py-4">
             <Input
               value={labelName}
               onChange={(e) => setLabelName(e.target.value)}
-              placeholder="标签名称（如：v1.0 发布前）"
+              placeholder={t("tagNamePlaceholder")}
               onKeyDown={(e) => { if (e.key === "Enter") confirmAddLabel(); }}
             />
           </div>
           <div className="flex justify-end gap-2">
-            <Button variant="secondary" onClick={() => setLabelDialogOpen(false)}>取消</Button>
-            <Button onClick={confirmAddLabel}>确定</Button>
+            <Button variant="secondary" onClick={() => setLabelDialogOpen(false)}>{t("common:cancel")}</Button>
+            <Button onClick={confirmAddLabel}>{t("common:confirm")}</Button>
           </div>
         </DialogContent>
       </Dialog>

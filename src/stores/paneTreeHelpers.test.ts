@@ -150,7 +150,6 @@ function makePanel(id: string): Panel {
       },
     ],
     activeTabId: `tab-${id}`,
-    viewMode: "tabs",
   };
 }
 

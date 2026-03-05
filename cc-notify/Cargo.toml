@@ -1,6 +1,6 @@
 [package]
 name = "cc-notify"
-version = "0.1.0"
+version = "0.94.0"
 edition = "2021"
 description = "Push notification system for CC-Panes"
 

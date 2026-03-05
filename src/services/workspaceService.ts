@@ -99,6 +99,36 @@ export async function gitClone(request: GitCloneRequest): Promise<string> {
   return invoke<string>("git_clone", { request });
 }
 
+// ============ Pinned / Hidden / Reorder ============
+
+export async function updateWorkspacePinned(
+  workspaceName: string,
+  pinned: boolean
+): Promise<void> {
+  const ws = await getWorkspace(workspaceName);
+  await invoke("update_workspace", {
+    name: workspaceName,
+    workspace: { ...ws, pinned },
+  });
+}
+
+export async function updateWorkspaceHidden(
+  workspaceName: string,
+  hidden: boolean
+): Promise<void> {
+  const ws = await getWorkspace(workspaceName);
+  await invoke("update_workspace", {
+    name: workspaceName,
+    workspace: { ...ws, hidden },
+  });
+}
+
+export async function reorderWorkspaces(
+  orderedNames: string[]
+): Promise<void> {
+  await invoke("reorder_workspaces", { orderedNames });
+}
+
 // ============ 目录扫描 ============
 
 export interface ScannedWorktree {

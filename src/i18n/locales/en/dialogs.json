@@ -240,5 +240,18 @@
   "statusIdle": "Idle",
   "statusExited": "Exited",
 
-  "notificationDesc": "Receive system desktop notifications for key events when the window is unfocused"
+  "notificationDesc": "Receive system desktop notifications for key events when the window is unfocused",
+
+  "projectRestore": "Project Restore",
+  "noSnapshots": "No snapshot labels. Snapshots are automatically created when launching Claude Code.",
+  "labelSourceClaudeSession": "CC Session",
+  "labelSourceRestore": "Restore",
+  "fileCount": "{{count}} files",
+  "confirmRestoreToLabel": "Are you sure you want to restore the project to the state of \"{{name}}\"?\n\nThis will restore {{count}} files. A snapshot of the current state will be created automatically before restoring.",
+  "filesRestored": "{{count}} files restored",
+  "restoreToSnapshot": "Restore to This Snapshot",
+  "loadingFileList": "Loading file list...",
+  "noFileHistory": "No file history records",
+  "autoTrackChanges": "File changes in the project will be recorded automatically",
+  "diffEarliestToCurrent": "Earliest version -> Current file"
 }

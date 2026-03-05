@@ -46,10 +46,11 @@ use commands::{
     list_workspaces, create_workspace, get_workspace, rename_workspace,
     delete_workspace, add_workspace_project, remove_workspace_project,
     update_workspace_alias, update_workspace_project_alias,
-    update_workspace_provider, update_workspace_path, scan_workspace_directory,
+    update_workspace_provider, update_workspace_path, update_workspace, reorder_workspaces,
+    scan_workspace_directory,
     // Settings 命令
     get_settings, update_settings, test_proxy,
-    get_data_dir_info, migrate_data_dir,
+    get_data_dir_info, migrate_data_dir, generate_claude_md,
     // Provider 命令
     list_providers, get_provider, get_default_provider,
     add_provider, update_provider, remove_provider, set_default_provider,
@@ -315,6 +316,8 @@ pub fn run() {
             update_workspace_project_alias,
             update_workspace_provider,
             update_workspace_path,
+            update_workspace,
+            reorder_workspaces,
             scan_workspace_directory,
             // Settings 命令
             get_settings,
@@ -322,6 +325,7 @@ pub fn run() {
             test_proxy,
             get_data_dir_info,
             migrate_data_dir,
+            generate_claude_md,
             // Provider 命令
             list_providers,
             get_provider,

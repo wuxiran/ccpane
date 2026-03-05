@@ -40,7 +40,7 @@ impl NotificationService {
         }
 
         let body = if exit_code == 0 {
-            format!("Session exited normally")
+            "Session exited normally".to_string()
         } else {
             format!("Session exited (exit code: {})", exit_code)
         };

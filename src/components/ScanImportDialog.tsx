@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Dialog,
   DialogContent,
@@ -29,6 +30,7 @@ export default function ScanImportDialog({
   repos,
   onConfirm,
 }: ScanImportDialogProps) {
+  const { t } = useTranslation(["dialogs", "common"]);
   const [selectedPaths, setSelectedPaths] = useState<Set<string>>(new Set());
   const [expandedRepos, setExpandedRepos] = useState<Set<number>>(new Set());
 
@@ -110,11 +112,11 @@ export default function ScanImportDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md max-h-[80vh] flex flex-col">
         <DialogHeader>
-          <DialogTitle>扫描结果</DialogTitle>
+          <DialogTitle>{t("scanTitle")}</DialogTitle>
         </DialogHeader>
 
         <div className="text-xs py-1" style={{ color: "var(--app-text-secondary)" }}>
-          发现 {repos.length} 个仓库，共 {totalPaths} 个项目
+          {t("scanSummary", { repoCount: repos.length, totalCount: totalPaths })}
         </div>
 
         {/* 全选 */}
@@ -129,7 +131,7 @@ export default function ScanImportDialog({
             readOnly
             className="cursor-pointer shrink-0"
           />
-          <span>{selectedPaths.size === totalPaths ? "取消全选" : "全选"}</span>
+          <span>{selectedPaths.size === totalPaths ? t("scanDeselectAll") : t("scanSelectAll")}</span>
           <Badge variant="secondary" className="ml-auto">
             {selectedPaths.size}/{totalPaths}
           </Badge>
@@ -189,7 +191,7 @@ export default function ScanImportDialog({
                       {pathName(repo.mainPath)}
                     </span>
                     <Badge variant="outline" className="text-[9px] px-1 h-4 shrink-0">
-                      主
+                      {t("mainBadge")}
                     </Badge>
                   </div>
 
@@ -224,9 +226,9 @@ export default function ScanImportDialog({
         </div>
 
         <DialogFooter>
-          <Button variant="secondary" onClick={() => onOpenChange(false)}>取消</Button>
+          <Button variant="secondary" onClick={() => onOpenChange(false)}>{t("common:cancel")}</Button>
           <Button disabled={selectedPaths.size === 0} onClick={handleConfirm}>
-            导入 {selectedPaths.size} 个项目
+            {t("importCount", { count: selectedPaths.size })}
           </Button>
         </DialogFooter>
       </DialogContent>

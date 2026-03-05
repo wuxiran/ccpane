@@ -25,4 +25,8 @@ export const settingsService = {
   async migrateDataDir(targetDir: string): Promise<void> {
     return invoke("migrate_data_dir", { targetDir });
   },
+
+  async generateClaudeMd(): Promise<void> {
+    return invoke<void>("generate_claude_md");
+  },
 };

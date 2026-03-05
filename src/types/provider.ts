@@ -13,33 +13,47 @@ export interface Provider {
   isDefault: boolean;
 }
 
+export type ProviderTypeLabelKey =
+  | "providerTypeAnthropicLabel"
+  | "providerTypeBedrockLabel"
+  | "providerTypeVertexLabel"
+  | "providerTypeProxyLabel"
+  | "providerTypeConfigLabel";
+
+export type ProviderTypeDescKey =
+  | "providerTypeAnthropicDesc"
+  | "providerTypeBedrockDesc"
+  | "providerTypeVertexDesc"
+  | "providerTypeProxyDesc"
+  | "providerTypeConfigDesc";
+
 export const PROVIDER_TYPE_META: Record<
   ProviderType,
-  { label: string; description: string; fields: string[] }
+  { labelKey: ProviderTypeLabelKey; descriptionKey: ProviderTypeDescKey; fields: string[] }
 > = {
   anthropic: {
-    label: "Anthropic 直连",
-    description: "使用 Anthropic 官方 API",
+    labelKey: "providerTypeAnthropicLabel",
+    descriptionKey: "providerTypeAnthropicDesc",
     fields: ["apiKey", "baseUrl"],
   },
   bedrock: {
-    label: "AWS Bedrock",
-    description: "通过 AWS Bedrock 访问",
+    labelKey: "providerTypeBedrockLabel",
+    descriptionKey: "providerTypeBedrockDesc",
     fields: ["region", "awsProfile"],
   },
   vertex: {
-    label: "Google Vertex",
-    description: "通过 Vertex AI 访问",
+    labelKey: "providerTypeVertexLabel",
+    descriptionKey: "providerTypeVertexDesc",
     fields: ["region", "projectId"],
   },
   proxy: {
-    label: "自定义代理",
-    description: "通过第三方 API 代理",
+    labelKey: "providerTypeProxyLabel",
+    descriptionKey: "providerTypeProxyDesc",
     fields: ["apiKey", "baseUrl"],
   },
   config_profile: {
-    label: "配置文件",
-    description: "指向 Claude Code 配置目录",
+    labelKey: "providerTypeConfigLabel",
+    descriptionKey: "providerTypeConfigDesc",
     fields: ["configDir"],
   },
 };

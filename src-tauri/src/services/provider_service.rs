@@ -1,4 +1,4 @@
-use crate::models::provider::{Provider, ProviderConfig};
+use crate::models::provider::{Provider, ProviderConfig, ProviderType};
 use anyhow::{Context, Result};
 use std::collections::HashMap;
 use std::path::Path;
@@ -147,8 +147,66 @@ impl ProviderService {
         };
 
         match provider {
-            Some(p) => p.to_env_vars(),
+            Some(p) => self.resolve_env_vars(p),
             None => HashMap::new(),
         }
+    }
+
+    /// 解析 Provider 环境变量，对 ConfigProfile 类型做特殊处理
+    fn resolve_env_vars(&self, provider: &Provider) -> HashMap<String, String> {
+        if provider.provider_type != ProviderType::ConfigProfile {
+            return provider.to_env_vars();
+        }
+
+        let config_path = match &provider.config_dir {
+            Some(dir) => dir,
+            None => return HashMap::new(),
+        };
+
+        let path = Path::new(config_path);
+
+        if path.is_dir() {
+            // 目录模式：保持原有行为，设置 CLAUDE_CONFIG_DIR
+            provider.to_env_vars()
+        } else if path.is_file() {
+            // 文件模式：读取 JSON 文件，解析 env 字段
+            match Self::parse_env_config_file(path) {
+                Ok(vars) => vars,
+                Err(e) => {
+                    eprintln!("[ProviderService] 解析配置文件失败 {}: {}", config_path, e);
+                    HashMap::new()
+                }
+            }
+        } else {
+            eprintln!("[ProviderService] 配置路径不存在: {}", config_path);
+            HashMap::new()
+        }
+    }
+
+    /// 解析 ccswitch 格式的 JSON 配置文件
+    /// 格式: { "env": { "KEY": "VALUE", ... } }
+    fn parse_env_config_file(path: &Path) -> Result<HashMap<String, String>> {
+        let content = std::fs::read_to_string(path)
+            .with_context(|| format!("无法读取配置文件: {}", path.display()))?;
+
+        let json: serde_json::Value = serde_json::from_str(&content)
+            .with_context(|| format!("JSON 解析失败: {}", path.display()))?;
+
+        let env_obj = match json.get("env").and_then(|v| v.as_object()) {
+            Some(obj) => obj,
+            None => {
+                eprintln!("[ProviderService] 配置文件缺少 env 字段: {}", path.display());
+                return Ok(HashMap::new());
+            }
+        };
+
+        let mut vars = HashMap::new();
+        for (key, value) in env_obj {
+            if let Some(val_str) = value.as_str() {
+                vars.insert(key.clone(), val_str.to_string());
+            }
+        }
+
+        Ok(vars)
     }
 }

@@ -1,6 +1,6 @@
 [package]
 name = "cc-panes-hook"
-version = "0.1.0"
+version = "0.94.0"
 edition = "2021"
 description = "Claude Code hook binary for CC-Panes"
 

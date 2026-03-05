@@ -240,5 +240,18 @@
   "statusIdle": "空闲",
   "statusExited": "已退出",
 
-  "notificationDesc": "窗口失焦时通过系统桌面通知提醒关键事件"
+  "notificationDesc": "窗口失焦时通过系统桌面通知提醒关键事件",
+
+  "projectRestore": "项目恢复",
+  "noSnapshots": "暂无快照标签。启动 Claude Code 时会自动创建项目快照。",
+  "labelSourceClaudeSession": "CC 会话",
+  "labelSourceRestore": "恢复",
+  "fileCount": "{{count}} 个文件",
+  "confirmRestoreToLabel": "确定要将项目恢复到「{{name}}」的状态吗？\n\n这将恢复 {{count}} 个文件。恢复前会自动创建当前状态的快照。",
+  "filesRestored": "已恢复 {{count}} 个文件",
+  "restoreToSnapshot": "恢复到此快照",
+  "loadingFileList": "加载文件列表...",
+  "noFileHistory": "暂无文件历史记录",
+  "autoTrackChanges": "项目中的文件变更将自动记录",
+  "diffEarliestToCurrent": "最早版本 -> 当前文件"
 }

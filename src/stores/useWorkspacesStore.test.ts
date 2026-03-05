@@ -45,16 +45,15 @@ describe("useWorkspacesStore", () => {
   });
 
   describe("load", () => {
-    it("应调用 listWorkspaces 并排序后设置 workspaces", async () => {
-      const ws1 = createTestWorkspace({ sortOrder: 2 });
-      const ws2 = createTestWorkspace({ sortOrder: 1 });
+    it("应调用 listWorkspaces 并设置 workspaces", async () => {
+      const ws1 = createTestWorkspace();
+      const ws2 = createTestWorkspace();
       vi.mocked(workspaceService.listWorkspaces).mockResolvedValue([ws1, ws2]);
 
       await useWorkspacesStore.getState().load();
 
       const state = useWorkspacesStore.getState();
-      expect(state.workspaces[0].id).toBe(ws2.id);
-      expect(state.workspaces[1].id).toBe(ws1.id);
+      expect(state.workspaces).toHaveLength(2);
       expect(state.loading).toBe(false);
     });
 
@@ -163,18 +162,17 @@ describe("useWorkspacesStore", () => {
   });
 
   describe("updatePinned", () => {
-    it("应更新 pinned 状态并重新排序", async () => {
-      const ws1 = createTestWorkspace({ name: "ws-1", sortOrder: 0 });
-      const ws2 = createTestWorkspace({ name: "ws-2", sortOrder: 1 });
+    it("应更新 pinned 状态", async () => {
+      const ws1 = createTestWorkspace({ name: "ws-1" });
+      const ws2 = createTestWorkspace({ name: "ws-2" });
       useWorkspacesStore.setState({ workspaces: [ws1, ws2] });
       vi.mocked(workspaceService.updateWorkspacePinned).mockResolvedValue();
 
       await useWorkspacesStore.getState().updatePinned("ws-2", true);
 
       const state = useWorkspacesStore.getState();
-      // pinned 的应排在前面
-      expect(state.workspaces[0].name).toBe("ws-2");
-      expect(state.workspaces[0].pinned).toBe(true);
+      const ws2After = state.workspaces.find((w) => w.name === "ws-2")!;
+      expect(ws2After.pinned).toBe(true);
     });
   });
 
@@ -222,19 +220,16 @@ describe("useWorkspacesStore", () => {
   });
 
   describe("排序逻辑", () => {
-    it("pinned 优先 → sortOrder 升序 → createdAt 升序", async () => {
-      const ws1 = createTestWorkspace({ name: "ws-1", pinned: false, sortOrder: 0, createdAt: "2024-01-01" });
-      const ws2 = createTestWorkspace({ name: "ws-2", pinned: true, sortOrder: 1, createdAt: "2024-01-02" });
-      const ws3 = createTestWorkspace({ name: "ws-3", pinned: false, sortOrder: 0, createdAt: "2024-01-03" });
-      vi.mocked(workspaceService.listWorkspaces).mockResolvedValue([ws1, ws3, ws2]);
+    it("load 应保持后端返回的顺序", async () => {
+      const ws1 = createTestWorkspace({ name: "ws-1", pinned: false, createdAt: "2024-01-01" });
+      const ws2 = createTestWorkspace({ name: "ws-2", pinned: true, createdAt: "2024-01-02" });
+      const ws3 = createTestWorkspace({ name: "ws-3", pinned: false, createdAt: "2024-01-03" });
+      vi.mocked(workspaceService.listWorkspaces).mockResolvedValue([ws2, ws1, ws3]);
 
       await useWorkspacesStore.getState().load();
 
       const names = useWorkspacesStore.getState().workspaces.map((w) => w.name);
-      // ws-2 (pinned) 在最前，然后 ws-1 和 ws-3（同 sortOrder，按 createdAt）
-      expect(names[0]).toBe("ws-2");
-      expect(names[1]).toBe("ws-1");
-      expect(names[2]).toBe("ws-3");
+      expect(names).toEqual(["ws-2", "ws-1", "ws-3"]);
     });
   });
 

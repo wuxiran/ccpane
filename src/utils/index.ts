@@ -1,5 +1,6 @@
 export { formatRelativeTime, formatFullTime, formatSize } from "./format";
 export { getFileName, getDirName, getProjectName } from "./path";
+export { parseEnvLines, formatEnvLines } from "./env";
 
 /**
  * 从 catch 到的未知错误中提取可读消息。

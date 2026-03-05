@@ -306,10 +306,10 @@ const TerminalView = forwardRef<TerminalViewHandle, TerminalViewProps>(
             const errorMsg = String(error);
             if (errorMsg.includes("claude CLI not found")) {
               term.writeln(
-                `\x1b[31mclaude CLI 未安装或不在 PATH 中。\x1b[0m`
+                `\x1b[31mclaude CLI is not installed or not in PATH.\x1b[0m`
               );
               term.writeln(
-                `\x1b[33m请安装：npm install -g @anthropic-ai/claude-code\x1b[0m`
+                `\x1b[33mPlease install: npm install -g @anthropic-ai/claude-code\x1b[0m`
               );
             } else {
               term.writeln(

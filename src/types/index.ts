@@ -41,3 +41,15 @@ export type {
   TodoQueryResult,
   TodoStats,
 } from "./todo";
+export type {
+  Memory,
+  MemoryScope,
+  MemoryCategory,
+  MemoryQuery,
+  MemoryQueryResult,
+  MemoryStats,
+  StoreMemoryRequest,
+  UpdateMemoryRequest,
+} from "./memory";
+export type { McpServerConfig } from "./mcp";
+export type { SkillInfo, SkillSummary } from "./skill";

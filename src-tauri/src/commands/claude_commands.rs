@@ -122,7 +122,7 @@ pub fn list_claude_sessions(project_path: String) -> AppResult<Vec<ClaudeSession
     let mut sessions = Vec::new();
 
     let home = dirs::home_dir()
-        .ok_or_else(|| "Failed to get user home directory")?;
+        .ok_or("Failed to get user home directory")?;
 
     let claude_projects = home.join(".claude").join("projects");
     if !claude_projects.exists() {
@@ -151,7 +151,7 @@ pub fn list_claude_sessions(project_path: String) -> AppResult<Vec<ClaudeSession
         if let Ok(files) = fs::read_dir(&path) {
             for file in files.flatten() {
                 let file_path = file.path();
-                if file_path.extension().map_or(false, |e| e == "jsonl") {
+                if file_path.extension().is_some_and(|e| e == "jsonl") {
                     if let Some(session) = parse_session_file(&file_path, &project_path) {
                         sessions.push(session);
                     }
@@ -174,7 +174,7 @@ pub fn list_all_claude_sessions() -> AppResult<Vec<ClaudeSession>> {
     let mut sessions = Vec::new();
 
     let home = dirs::home_dir()
-        .ok_or_else(|| "Failed to get user home directory")?;
+        .ok_or("Failed to get user home directory")?;
 
     let claude_projects = home.join(".claude").join("projects");
     if !claude_projects.exists() {
@@ -197,7 +197,7 @@ pub fn list_all_claude_sessions() -> AppResult<Vec<ClaudeSession>> {
         if let Ok(files) = fs::read_dir(&path) {
             for file in files.flatten() {
                 let file_path = file.path();
-                if file_path.extension().map_or(false, |e| e == "jsonl") {
+                if file_path.extension().is_some_and(|e| e == "jsonl") {
                     if let Some(session) = parse_session_file(&file_path, &dir_name) {
                         sessions.push(session);
                     }
@@ -264,7 +264,7 @@ pub fn scan_broken_sessions(project_path: Option<String>) -> AppResult<Vec<Broke
     let mut results = Vec::new();
 
     let home = dirs::home_dir()
-        .ok_or_else(|| "Failed to get user home directory")?;
+        .ok_or("Failed to get user home directory")?;
 
     let claude_projects = home.join(".claude").join("projects");
     if !claude_projects.exists() {
@@ -298,7 +298,7 @@ pub fn scan_broken_sessions(project_path: Option<String>) -> AppResult<Vec<Broke
 
         for file in files.flatten() {
             let file_path = file.path();
-            if !file_path.extension().map_or(false, |e| e == "jsonl") {
+            if file_path.extension().is_none_or(|e| e != "jsonl") {
                 continue;
             }
 
@@ -359,7 +359,7 @@ pub fn clean_session_file(file_path: String) -> CleanResult {
             return Err("Path is not within .claude directory".to_string());
         }
         // 扩展名必须为 .jsonl
-        if canonical.extension().map_or(true, |e| e != "jsonl") {
+        if canonical.extension().is_none_or(|e| e != "jsonl") {
             return Err("Only .jsonl files are allowed".to_string());
         }
         Ok(())
@@ -398,7 +398,7 @@ pub fn clean_session_file(file_path: String) -> CleanResult {
                     .get("message")
                     .and_then(|m| m.get("content"))
                     .and_then(|c| c.as_array())
-                    .map_or(false, |arr| {
+                    .is_some_and(|arr| {
                         arr.iter().any(|item| {
                             matches!(
                                 item.get("type").and_then(|t| t.as_str()),
@@ -503,7 +503,7 @@ pub fn clean_all_broken_sessions(project_path: Option<String>) -> AppResult<Vec<
 #[tauri::command]
 pub fn extract_last_prompt(project_path: String, session_id: String) -> AppResult<Option<String>> {
     let home = dirs::home_dir()
-        .ok_or_else(|| "Failed to get user home directory")?;
+        .ok_or("Failed to get user home directory")?;
 
     let claude_projects = home.join(".claude").join("projects");
     if !claude_projects.exists() {

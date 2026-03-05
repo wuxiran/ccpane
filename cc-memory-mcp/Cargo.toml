@@ -1,6 +1,6 @@
 [package]
 name = "cc-memory-mcp"
-version = "0.1.0"
+version = "0.94.0"
 edition = "2021"
 description = "MCP Server for CC-Panes Memory system"
 

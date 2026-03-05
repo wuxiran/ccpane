@@ -127,17 +127,17 @@ export default function App() {
     const register = useShortcutsStore.getState().registerAction;
     register({
       id: "toggle-sidebar",
-      label: "折叠/展开侧边栏",
+      label: i18n.t("toggle-sidebar", { ns: "shortcuts" }),
       handler: () => setSidebarCollapsed((prev) => !prev),
     });
     register({
       id: "toggle-fullscreen",
-      label: "切换全屏",
+      label: i18n.t("toggle-fullscreen", { ns: "shortcuts" }),
       handler: () => useFullscreenStore.getState().toggleFullscreen(),
     });
     register({
       id: "new-tab",
-      label: "新建标签",
+      label: i18n.t("new-tab", { ns: "shortcuts" }),
       handler: () => {
         const s = usePanesStore.getState();
         if (s.activePaneId) s.addTab(s.activePaneId, "", "");
@@ -145,7 +145,7 @@ export default function App() {
     });
     register({
       id: "close-tab",
-      label: "关闭标签",
+      label: i18n.t("close-tab", { ns: "shortcuts" }),
       handler: () => {
         const s = usePanesStore.getState();
         if (!s.activePaneId) return;
@@ -161,12 +161,12 @@ export default function App() {
     });
     register({
       id: "settings",
-      label: "打开设置",
+      label: i18n.t("settings", { ns: "shortcuts" }),
       handler: () => useDialogStore.getState().openSettings(),
     });
     register({
       id: "split-right",
-      label: "向右分屏",
+      label: i18n.t("split-right", { ns: "shortcuts" }),
       handler: () => {
         const s = usePanesStore.getState();
         if (s.activePaneId) s.splitRight(s.activePaneId);
@@ -174,7 +174,7 @@ export default function App() {
     });
     register({
       id: "split-down",
-      label: "向下分屏",
+      label: i18n.t("split-down", { ns: "shortcuts" }),
       handler: () => {
         const s = usePanesStore.getState();
         if (s.activePaneId) s.splitDown(s.activePaneId);
@@ -182,7 +182,7 @@ export default function App() {
     });
     register({
       id: "next-tab",
-      label: "下一个标签",
+      label: i18n.t("next-tab", { ns: "shortcuts" }),
       handler: () => {
         const s = usePanesStore.getState();
         if (s.activePaneId) s.nextTab(s.activePaneId);
@@ -190,7 +190,7 @@ export default function App() {
     });
     register({
       id: "prev-tab",
-      label: "上一个标签",
+      label: i18n.t("prev-tab", { ns: "shortcuts" }),
       handler: () => {
         const s = usePanesStore.getState();
         if (s.activePaneId) s.prevTab(s.activePaneId);
@@ -198,13 +198,13 @@ export default function App() {
     });
     register({
       id: "toggle-mini-mode",
-      label: "切换迷你模式",
+      label: i18n.t("toggle-mini-mode", { ns: "shortcuts" }),
       handler: () => useMiniModeStore.getState().toggleMiniMode(),
     });
     for (let i = 1; i <= 9; i++) {
       register({
         id: `switch-tab-${i}`,
-        label: `切换到标签 ${i}`,
+        label: i18n.t("switch-tab", { ns: "shortcuts", index: i }),
         handler: () => {
           const s = usePanesStore.getState();
           if (s.activePaneId) s.switchToTab(s.activePaneId, i - 1);

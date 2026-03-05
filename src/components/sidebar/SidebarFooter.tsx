@@ -1,4 +1,4 @@
-import { Pin, Minimize2, PanelTopDashed, Settings } from "lucide-react";
+import { Pin, Minimize2, PanelTopDashed, Settings, Bot } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useThemeStore, useMiniModeStore, useBorderlessStore } from "@/stores";
 import { useWindowControl } from "@/hooks/useWindowControl";
@@ -6,9 +6,10 @@ import { useWindowControl } from "@/hooks/useWindowControl";
 interface SidebarFooterProps {
   collapsed: boolean;
   onSettings: () => void;
+  onSelfDialogue: () => void;
 }
 
-export default function SidebarFooter({ collapsed, onSettings }: SidebarFooterProps) {
+export default function SidebarFooter({ collapsed, onSettings, onSelfDialogue }: SidebarFooterProps) {
   const { t } = useTranslation("sidebar");
   const isDark = useThemeStore((s) => s.isDark);
   const enterMiniMode = useMiniModeStore((s) => s.enterMiniMode);
@@ -18,6 +19,13 @@ export default function SidebarFooter({ collapsed, onSettings }: SidebarFooterPr
   if (collapsed) {
     return (
       <div className="mt-auto flex flex-col items-center gap-2 pb-4">
+        <button
+          className={`p-1 rounded-md transition-all ${isDark ? 'text-slate-400 hover:bg-white/10 hover:text-slate-200' : 'text-slate-400 hover:bg-white/60 hover:text-slate-600'}`}
+          onClick={onSelfDialogue}
+          title={t("selfDialogue")}
+        >
+          <Bot className="w-4 h-4" />
+        </button>
         <Settings
           className={`w-4 h-4 cursor-pointer transition-all hover:rotate-90 ${isDark ? 'text-slate-400 hover:text-slate-200' : 'text-slate-400 hover:text-slate-600'}`}
           onClick={onSettings}
@@ -63,6 +71,13 @@ export default function SidebarFooter({ collapsed, onSettings }: SidebarFooterPr
             title={t("borderlessMode")}
           >
             <PanelTopDashed className="w-3.5 h-3.5" />
+          </button>
+          <button
+            className={`p-1 rounded-md transition-all ${isDark ? 'text-slate-400 hover:bg-white/10 hover:text-slate-200' : 'text-slate-400 hover:bg-white/60 hover:text-slate-600'}`}
+            onClick={onSelfDialogue}
+            title={t("selfDialogue")}
+          >
+            <Bot className="w-3.5 h-3.5" />
           </button>
           <Settings
             className={`w-4 h-4 cursor-pointer transition-all hover:rotate-90 ${isDark ? 'text-slate-400 hover:text-slate-200' : 'text-slate-400 hover:text-slate-600'}`}

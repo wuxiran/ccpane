@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 /// 应用设置
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AppSettings {
     #[serde(default)]
@@ -85,19 +85,6 @@ pub struct GeneralSettings {
 }
 
 // ---- 默认值实现 ----
-
-impl Default for AppSettings {
-    fn default() -> Self {
-        Self {
-            proxy: ProxySettings::default(),
-            theme: ThemeSettings::default(),
-            terminal: TerminalSettings::default(),
-            shortcuts: ShortcutSettings::default(),
-            general: GeneralSettings::default(),
-            notification: NotificationSettings::default(),
-        }
-    }
-}
 
 impl Default for ProxySettings {
     fn default() -> Self {

@@ -102,9 +102,22 @@ function collectPanels(node: PaneNode): Panel[] {
   return node.children.flatMap(collectPanels);
 }
 
+/** 已关闭标签的快照（用于恢复） */
+interface ClosedTabSnapshot {
+  projectId: string;
+  projectPath: string;
+  title: string;
+  resumeId?: string;
+  workspaceName?: string;
+  providerId?: string;
+  workspacePath?: string;
+  launchClaude?: boolean;
+}
+
 interface PanesState {
   rootPane: PaneNode;
   activePaneId: string;
+  closedTabs: ClosedTabSnapshot[];
 
   // 派生
   allPanels: () => Panel[];
@@ -137,6 +150,12 @@ interface PanesState {
   nextTab: (paneId: string) => void;
   prevTab: (paneId: string) => void;
   switchToTab: (paneId: string, index: number) => void;
+  minimizeTab: (paneId: string, tabId: string) => void;
+  restoreTab: (paneId: string, tabId: string) => void;
+  reopenClosedTab: (paneId: string) => void;
+  openMcpConfig: (projectPath: string, title: string) => void;
+  openSkillManager: (projectPath: string, title: string) => void;
+  openMemoryManager: (projectPath: string, title: string) => void;
 }
 
 const initialPanel = createPanel();
@@ -145,6 +164,7 @@ export const usePanesStore = create<PanesState>()(
   immer((set, get) => ({
     rootPane: initialPanel,
     activePaneId: initialPanel.id,
+    closedTabs: [],
 
     allPanels: () => collectPanels(get().rootPane),
 
@@ -208,6 +228,28 @@ export const usePanesStore = create<PanesState>()(
     splitDown: (paneId) => get().split(paneId, "down"),
 
     closePane: (paneId) => {
+      // 保存可恢复标签
+      const closingPane = findPane(get().rootPane, paneId);
+      if (closingPane?.type === "panel") {
+        const recoverableTabs: ClosedTabSnapshot[] = closingPane.tabs
+          .filter((t) => t.projectPath && t.contentType === "terminal")
+          .map((t) => ({
+            projectId: t.projectId,
+            projectPath: t.projectPath,
+            title: t.title,
+            resumeId: t.resumeId,
+            workspaceName: t.workspaceName,
+            providerId: t.providerId,
+            workspacePath: t.workspacePath,
+            launchClaude: t.launchClaude,
+          }));
+        if (recoverableTabs.length > 0) {
+          set((state) => {
+            state.closedTabs.push(...recoverableTabs);
+          });
+        }
+      }
+
       set((state) => {
         const parentResult = findParent(state.rootPane, paneId);
         if (!parentResult) return;
@@ -435,6 +477,22 @@ export const usePanesStore = create<PanesState>()(
       const snapTab = snapPane.tabs.find((t) => t.id === tabId);
       if (!snapTab || snapTab.pinned) return;
 
+      // 保存可恢复标签
+      if (snapTab.projectPath && snapTab.contentType === "terminal") {
+        set((state) => {
+          state.closedTabs.push({
+            projectId: snapTab.projectId,
+            projectPath: snapTab.projectPath,
+            title: snapTab.title,
+            resumeId: snapTab.resumeId,
+            workspaceName: snapTab.workspaceName,
+            providerId: snapTab.providerId,
+            workspacePath: snapTab.workspacePath,
+            launchClaude: snapTab.launchClaude,
+          });
+        });
+      }
+
       if (snapPane.tabs.length <= 1) {
         get().closePane(paneId);
         return;
@@ -625,6 +683,140 @@ export const usePanesStore = create<PanesState>()(
         if (index >= 0 && index < pane.tabs.length) {
           pane.activeTabId = pane.tabs[index].id;
         }
+      });
+    },
+
+    minimizeTab: (paneId, tabId) => {
+      set((state) => {
+        const pane = findPane(state.rootPane, paneId);
+        if (pane?.type !== "panel") return;
+        const tab = pane.tabs.find((t) => t.id === tabId);
+        if (!tab) return;
+        tab.minimized = true;
+        // 如果当前活动标签被最小化，切换到下一个非最小化标签
+        if (pane.activeTabId === tabId) {
+          const nextVisible = pane.tabs.find((t) => t.id !== tabId && !t.minimized);
+          if (nextVisible) {
+            pane.activeTabId = nextVisible.id;
+          }
+        }
+      });
+    },
+
+    restoreTab: (paneId, tabId) => {
+      set((state) => {
+        const pane = findPane(state.rootPane, paneId);
+        if (pane?.type !== "panel") return;
+        const tab = pane.tabs.find((t) => t.id === tabId);
+        if (!tab) return;
+        tab.minimized = false;
+        pane.activeTabId = tabId;
+      });
+    },
+
+    reopenClosedTab: (paneId) => {
+      const { closedTabs } = get();
+      if (closedTabs.length === 0) return;
+
+      const lastClosed = closedTabs[closedTabs.length - 1];
+      set((state) => {
+        state.closedTabs.pop();
+      });
+
+      get().addTab(
+        paneId,
+        lastClosed.projectId,
+        lastClosed.projectPath,
+        lastClosed.resumeId,
+        lastClosed.workspaceName,
+        lastClosed.providerId,
+        lastClosed.workspacePath,
+        lastClosed.launchClaude,
+      );
+    },
+
+    openMcpConfig: (projectPath, title) => {
+      const active = get().activePane();
+      if (!active) return;
+
+      // 复用已有 tab
+      const existing = active.tabs.find(
+        (t) => t.contentType === "mcp-config" && t.projectPath === projectPath
+      );
+      if (existing) {
+        get().selectTab(active.id, existing.id);
+        return;
+      }
+
+      set((state) => {
+        const pane = findPane(state.rootPane, state.activePaneId);
+        if (pane?.type !== "panel") return;
+        const newTab: Tab = {
+          id: generateId("tab"),
+          title: `MCP - ${title}`,
+          contentType: "mcp-config",
+          projectId: "",
+          projectPath,
+          sessionId: null,
+        };
+        pane.tabs.push(newTab);
+        pane.activeTabId = newTab.id;
+      });
+    },
+
+    openSkillManager: (projectPath, title) => {
+      const active = get().activePane();
+      if (!active) return;
+
+      const existing = active.tabs.find(
+        (t) => t.contentType === "skill-manager" && t.projectPath === projectPath
+      );
+      if (existing) {
+        get().selectTab(active.id, existing.id);
+        return;
+      }
+
+      set((state) => {
+        const pane = findPane(state.rootPane, state.activePaneId);
+        if (pane?.type !== "panel") return;
+        const newTab: Tab = {
+          id: generateId("tab"),
+          title: `Skill - ${title}`,
+          contentType: "skill-manager",
+          projectId: "",
+          projectPath,
+          sessionId: null,
+        };
+        pane.tabs.push(newTab);
+        pane.activeTabId = newTab.id;
+      });
+    },
+
+    openMemoryManager: (projectPath, title) => {
+      const active = get().activePane();
+      if (!active) return;
+
+      const existing = active.tabs.find(
+        (t) => t.contentType === "memory-manager" && t.projectPath === projectPath
+      );
+      if (existing) {
+        get().selectTab(active.id, existing.id);
+        return;
+      }
+
+      set((state) => {
+        const pane = findPane(state.rootPane, state.activePaneId);
+        if (pane?.type !== "panel") return;
+        const newTab: Tab = {
+          id: generateId("tab"),
+          title: `Memory - ${title}`,
+          contentType: "memory-manager",
+          projectId: "",
+          projectPath,
+          sessionId: null,
+        };
+        pane.tabs.push(newTab);
+        pane.activeTabId = newTab.id;
       });
     },
   }))

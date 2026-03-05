@@ -36,5 +36,9 @@
   "splitDown": "Split Down",
   "exitBorderless": "Exit Borderless",
   "switchLanguage": "Switch Language",
-  "confirmAction": "Confirm Action"
+  "confirmAction": "Confirm Action",
+  "miniUnpin": "Unpin",
+  "miniPin": "Pin Window",
+  "miniRestore": "Restore Window",
+  "miniNoActiveSessions": "No active sessions"
 }

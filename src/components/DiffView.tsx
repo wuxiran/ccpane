@@ -1,4 +1,5 @@
 import { useMemo, memo } from "react";
+import { useTranslation } from "react-i18next";
 import type { DiffResult, DiffLine } from "@/services";
 
 interface DiffViewProps {
@@ -38,6 +39,7 @@ function getSegments(line: DiffLine): Segment[] {
 }
 
 export default memo(function DiffView({ diff, loading }: DiffViewProps) {
+  const { t } = useTranslation("dialogs");
   const totalLines = useMemo(() => {
     if (!diff) return 0;
     return diff.hunks.reduce((sum, h) => sum + h.lines.length, 0);
@@ -46,7 +48,7 @@ export default memo(function DiffView({ diff, loading }: DiffViewProps) {
   if (loading) {
     return (
       <div className="h-full flex items-center justify-center text-[13px]" style={{ color: "var(--app-text-tertiary)" }}>
-        计算差异中...
+        {t("diffComputing")}
       </div>
     );
   }
@@ -54,7 +56,7 @@ export default memo(function DiffView({ diff, loading }: DiffViewProps) {
   if (!diff) {
     return (
       <div className="h-full flex items-center justify-center text-[13px]" style={{ color: "var(--app-text-tertiary)" }}>
-        选择一个版本查看差异
+        {t("diffSelectVersion")}
       </div>
     );
   }
@@ -62,7 +64,7 @@ export default memo(function DiffView({ diff, loading }: DiffViewProps) {
   if (diff.isBinary) {
     return (
       <div className="h-full flex items-center justify-center text-[13px]" style={{ color: "var(--app-text-tertiary)" }}>
-        二进制文件，无法显示差异
+        {t("diffBinaryFile")}
       </div>
     );
   }
@@ -70,7 +72,7 @@ export default memo(function DiffView({ diff, loading }: DiffViewProps) {
   if (diff.truncated) {
     return (
       <div className="h-full flex items-center justify-center text-[13px]" style={{ color: "var(--app-text-tertiary)" }}>
-        文件超过 10000 行，差异计算已跳过
+        {t("diffTooLarge")}
       </div>
     );
   }
@@ -78,7 +80,7 @@ export default memo(function DiffView({ diff, loading }: DiffViewProps) {
   if (diff.hunks.length === 0) {
     return (
       <div className="h-full flex items-center justify-center text-[13px]" style={{ color: "var(--app-text-tertiary)" }}>
-        文件内容没有变更
+        {t("diffNoChanges")}
       </div>
     );
   }
@@ -92,7 +94,7 @@ export default memo(function DiffView({ diff, loading }: DiffViewProps) {
       >
         <span className="font-semibold" style={{ color: "#22c55e" }}>+{diff.stats.additions}</span>
         <span className="font-semibold" style={{ color: "#ef4444" }}>-{diff.stats.deletions}</span>
-        <span style={{ color: "var(--app-text-tertiary)" }}>{totalLines} 行</span>
+        <span style={{ color: "var(--app-text-tertiary)" }}>{t("diffLineCount", { count: totalLines })}</span>
       </div>
 
       {/* Hunks */}

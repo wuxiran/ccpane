@@ -1,0 +1,37 @@
+# Auto detect text files and perform LF normalization
+* text=auto eol=lf
+
+# Windows batch scripts require CRLF
+*.cmd text eol=crlf
+*.bat text eol=crlf
+
+# Source code - enforce LF
+*.rs text eol=lf
+*.ts text eol=lf
+*.tsx text eol=lf
+*.js text eol=lf
+*.jsx text eol=lf
+*.css text eol=lf
+*.html text eol=lf
+
+# Config files - enforce LF
+*.json text eol=lf
+*.md text eol=lf
+*.toml text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+
+# Lock files - LF, no diff
+*.lock text eol=lf -diff
+Cargo.lock text eol=lf -diff
+
+# Binary files
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary

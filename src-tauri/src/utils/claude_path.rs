@@ -3,10 +3,7 @@
 /// 规则：冒号、斜杠、反斜杠、下划线均替换为连字符 `-`。
 /// 例如：`D:\04_workspace_rust\vms` → `D--04-workspace-rust-vms`
 pub fn encode_claude_project_path(path: &str) -> String {
-    path.replace(':', "-")
-        .replace('\\', "-")
-        .replace('/', "-")
-        .replace('_', "-")
+    path.replace([':', '\\', '/', '_'], "-")
 }
 
 /// 检查目录名是否匹配项目路径（编码后比较）。

@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { Plus, Trash2, Star, Pencil, FolderOpen, FileText, ExternalLink, Play } from "lucide-react";
 import { open } from "@tauri-apps/plugin-dialog";
@@ -33,6 +34,7 @@ const emptyForm: FormState = {
 };
 
 export default function ProviderSection() {
+  const { t } = useTranslation(["settings", "common"]);
   const providers = useProvidersStore((s) => s.providers);
   const loadProviders = useProvidersStore((s) => s.loadProviders);
   const addProvider = useProvidersStore((s) => s.addProvider);
@@ -90,7 +92,7 @@ export default function ProviderSection() {
   }
 
   async function handleSave() {
-    if (!form.name.trim()) { toast.error("请输入名称"); return; }
+    if (!form.name.trim()) { toast.error(t("nameRequired")); return; }
     try {
       const provider: Provider = {
         id: editingId || crypto.randomUUID(),
@@ -108,29 +110,29 @@ export default function ProviderSection() {
         const existing = providers.find((p) => p.id === editingId);
         if (existing) provider.isDefault = existing.isDefault;
         await updateProvider(provider);
-        toast.success("Provider 已更新");
+        toast.success(t("providerUpdated"));
       } else {
         await addProvider(provider);
-        toast.success("Provider 已添加");
+        toast.success(t("providerAdded"));
       }
       resetForm();
     } catch (e) {
-      toast.error(`操作失败: ${e}`);
+      toast.error(t("operationFailed", { error: String(e) }));
     }
   }
 
   async function handleRemove(id: string) {
-    try { await removeProvider(id); toast.success("Provider 已删除"); } catch (e) { toast.error(`删除失败: ${e}`); }
+    try { await removeProvider(id); toast.success(t("providerDeleted")); } catch (e) { toast.error(t("deleteFailed", { error: String(e) })); }
   }
 
   async function handleSetDefault(id: string) {
-    try { await setDefault(id); toast.success("已设为默认"); } catch (e) { toast.error(`设置失败: ${e}`); }
+    try { await setDefault(id); toast.success(t("setAsDefault")); } catch (e) { toast.error(t("setDefaultFailed", { error: String(e) })); }
   }
 
   function handleLaunchWithProvider(providerId: string) {
     const ws = useWorkspacesStore.getState().selectedWorkspace();
     if (!ws || ws.projects.length === 0) {
-      toast.error("请先在侧边栏选中一个工作空间");
+      toast.error(t("selectWorkspaceFirst"));
       return;
     }
     useDialogStore.getState().setPendingLaunch({
@@ -143,7 +145,8 @@ export default function ProviderSection() {
   }
 
   function getTypeLabel(pt: ProviderType): string {
-    return PROVIDER_TYPE_META[pt]?.label || pt;
+    const meta = PROVIDER_TYPE_META[pt];
+    return meta ? t(meta.labelKey) : pt;
   }
 
   function updateForm(partial: Partial<FormState>) {
@@ -164,7 +167,20 @@ export default function ProviderSection() {
   }
 
   async function handleBrowseConfigDir() {
-    const selected = await open({ directory: true, multiple: false, title: "选择 Claude Code 配置目录" });
+    const selected = await open({ directory: true, multiple: false, title: t("selectConfigDir") });
+    if (selected) {
+      updateForm({ configDir: selected as string });
+      loadConfigDirInfo(selected as string);
+    }
+  }
+
+  async function handleBrowseConfigFile() {
+    const selected = await open({
+      directory: false,
+      multiple: false,
+      title: t("selectCcswitchFile"),
+      filters: [{ name: t("jsonFiles"), extensions: ["json"] }],
+    });
     if (selected) {
       updateForm({ configDir: selected as string });
       loadConfigDirInfo(selected as string);
@@ -175,17 +191,17 @@ export default function ProviderSection() {
     try {
       await providerService.openPathInExplorer(path);
     } catch (e) {
-      toast.error(`打开失败: ${e}`);
+      toast.error(t("openFailed", { error: String(e) }));
     }
   }
 
   return (
     <div className="flex flex-col gap-3">
       <h3 className="text-[15px] font-semibold mb-1" style={{ color: "var(--app-text-primary)" }}>
-        Provider 管理
+        {t("providerTitle")}
       </h3>
       <p className="text-xs mb-1" style={{ color: "var(--app-text-tertiary)" }}>
-        管理 AI Provider 配置。为工作空间绑定 Provider 后，打开终端时会注入对应环境变量。
+        {t("providerDesc")}
       </p>
 
       {/* Provider 列表 */}
@@ -199,7 +215,7 @@ export default function ProviderSection() {
             <div className="flex flex-col gap-0.5">
               <div className="flex items-center gap-1.5 text-[13px] font-medium" style={{ color: "var(--app-text-primary)" }}>
                 {p.name}
-                {p.isDefault && <Badge variant="secondary" className="text-[10px] px-1.5 py-0">默认</Badge>}
+                {p.isDefault && <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{t("defaultBadge")}</Badge>}
               </div>
               <div className="text-[11px]" style={{ color: "var(--app-text-tertiary)" }}>
                 {getTypeLabel(p.providerType)}
@@ -211,25 +227,25 @@ export default function ProviderSection() {
               </div>
             </div>
             <div className="flex gap-0.5">
-              <Button variant="ghost" size="sm" onClick={() => handleLaunchWithProvider(p.id)} title="使用此 Provider 启动 Claude Code"><Play size={14} /></Button>
+              <Button variant="ghost" size="sm" onClick={() => handleLaunchWithProvider(p.id)} title={t("provider")}><Play size={14} /></Button>
               {!p.isDefault && (
-                <Button variant="ghost" size="sm" onClick={() => handleSetDefault(p.id)} title="设为默认"><Star size={14} /></Button>
+                <Button variant="ghost" size="sm" onClick={() => handleSetDefault(p.id)} title={t("setAsDefaultBtn")}><Star size={14} /></Button>
               )}
-              <Button variant="ghost" size="sm" onClick={() => handleEdit(p)} title="编辑"><Pencil size={14} /></Button>
-              <Button variant="ghost" size="sm" className="text-destructive" onClick={() => handleRemove(p.id)} title="删除"><Trash2 size={14} /></Button>
+              <Button variant="ghost" size="sm" onClick={() => handleEdit(p)} title={t("editBtn")}><Pencil size={14} /></Button>
+              <Button variant="ghost" size="sm" className="text-destructive" onClick={() => handleRemove(p.id)} title={t("deleteBtn")}><Trash2 size={14} /></Button>
             </div>
           </div>
         ))}
         {providers.length === 0 && (
           <div className="text-xs text-center py-4" style={{ color: "var(--app-text-tertiary)" }}>
-            暂无 Provider，点击下方按钮添加
+            {t("noProviders")}
           </div>
         )}
       </div>
 
       {!editing && (
         <Button variant="outline" size="sm" onClick={handleNew}>
-          <Plus size={14} className="mr-1" /> 新增 Provider
+          <Plus size={14} className="mr-1" /> {t("addProvider")}
         </Button>
       )}
 
@@ -239,16 +255,16 @@ export default function ProviderSection() {
           style={{ background: "var(--app-hover)", border: "1px solid var(--app-border)" }}
         >
           <div className="text-[13px] font-semibold" style={{ color: "var(--app-text-primary)" }}>
-            {editingId ? "编辑 Provider" : "新增 Provider"}
+            {editingId ? t("editProvider") : t("addProvider")}
           </div>
 
           <div className="flex flex-col gap-1">
-            <Label>名称</Label>
-            <Input value={form.name} onChange={(e) => updateForm({ name: e.target.value })} placeholder="例如：我的 Anthropic" />
+            <Label>{t("providerName")}</Label>
+            <Input value={form.name} onChange={(e) => updateForm({ name: e.target.value })} placeholder={t("providerNamePlaceholder")} />
           </div>
 
           <div className="flex flex-col gap-1">
-            <Label>类型</Label>
+            <Label>{t("providerType")}</Label>
             <select
               value={form.providerType}
               onChange={(e) => handleTypeChange(e.target.value as ProviderType)}
@@ -256,45 +272,45 @@ export default function ProviderSection() {
               style={{ border: "1px solid var(--app-border)", background: "var(--app-content)", color: "var(--app-text-primary)" }}
             >
               {Object.entries(PROVIDER_TYPE_META).map(([key, meta]) => (
-                <option key={key} value={key}>{meta.label} - {meta.description}</option>
+                <option key={key} value={key}>{t(meta.labelKey)} - {t(meta.descriptionKey)}</option>
               ))}
             </select>
           </div>
 
           {currentMeta.fields.includes("apiKey") && (
             <div className="flex flex-col gap-1">
-              <Label>API Key</Label>
+              <Label>{t("apiKey")}</Label>
               <Input type="password" value={form.apiKey} onChange={(e) => updateForm({ apiKey: e.target.value })} placeholder="sk-ant-..." />
             </div>
           )}
           {currentMeta.fields.includes("baseUrl") && (
             <div className="flex flex-col gap-1">
-              <Label>Base URL（可选）</Label>
+              <Label>{t("baseUrl")}</Label>
               <Input value={form.baseUrl} onChange={(e) => updateForm({ baseUrl: e.target.value })} placeholder="https://api.anthropic.com" />
             </div>
           )}
           {currentMeta.fields.includes("region") && (
             <div className="flex flex-col gap-1">
-              <Label>Region</Label>
+              <Label>{t("region")}</Label>
               <Input value={form.region} onChange={(e) => updateForm({ region: e.target.value })} placeholder={form.providerType === "bedrock" ? "us-east-1" : "us-central1"} />
             </div>
           )}
           {currentMeta.fields.includes("awsProfile") && (
             <div className="flex flex-col gap-1">
-              <Label>AWS Profile（可选）</Label>
+              <Label>{t("awsProfile")}</Label>
               <Input value={form.awsProfile} onChange={(e) => updateForm({ awsProfile: e.target.value })} placeholder="default" />
             </div>
           )}
           {currentMeta.fields.includes("projectId") && (
             <div className="flex flex-col gap-1">
-              <Label>Vertex Project ID</Label>
+              <Label>{t("vertexProjectId")}</Label>
               <Input value={form.projectId} onChange={(e) => updateForm({ projectId: e.target.value })} placeholder="my-gcp-project" />
             </div>
           )}
 
           {currentMeta.fields.includes("configDir") && (
             <div className="flex flex-col gap-1.5">
-              <Label>配置目录</Label>
+              <Label>{t("configPath")}</Label>
               <div className="flex gap-1.5">
                 <Input
                   value={form.configDir}
@@ -303,11 +319,14 @@ export default function ProviderSection() {
                     if (e.target.value) loadConfigDirInfo(e.target.value);
                     else setConfigDirInfo(null);
                   }}
-                  placeholder="例如：C:\Users\xxx\.claude-profile-a"
+                  placeholder={t("configPathPlaceholder")}
                   className="flex-1"
                 />
-                <Button variant="outline" size="sm" onClick={handleBrowseConfigDir} className="shrink-0">
-                  <FolderOpen size={14} className="mr-1" /> 浏览
+                <Button variant="outline" size="sm" onClick={handleBrowseConfigDir} className="shrink-0" title={t("selectConfigDir")}>
+                  <FolderOpen size={14} className="mr-1" /> {t("directory")}
+                </Button>
+                <Button variant="outline" size="sm" onClick={handleBrowseConfigFile} className="shrink-0" title={t("selectCcswitchFile")}>
+                  <FileText size={14} className="mr-1" /> {t("file")}
                 </Button>
               </div>
 
@@ -341,11 +360,11 @@ export default function ProviderSection() {
                   )}
                   <div className="flex gap-1.5 pt-1" style={{ borderTop: "1px solid var(--app-border)" }}>
                     <Button variant="ghost" size="sm" className="h-6 text-[11px] px-2" onClick={() => handleOpenInExplorer(form.configDir)}>
-                      <ExternalLink size={12} className="mr-1" /> 打开目录
+                      <ExternalLink size={12} className="mr-1" /> {t("openDir")}
                     </Button>
                     {configDirInfo.hasSettings && (
                       <Button variant="ghost" size="sm" className="h-6 text-[11px] px-2" onClick={() => handleOpenInExplorer(form.configDir + "/settings.json")}>
-                        <FileText size={12} className="mr-1" /> 编辑 settings
+                        <FileText size={12} className="mr-1" /> {t("editSettings")}
                       </Button>
                     )}
                   </div>
@@ -354,15 +373,15 @@ export default function ProviderSection() {
 
               {form.configDir && !configDirInfo && (
                 <div className="text-[11px] py-1" style={{ color: "var(--app-text-tertiary)" }}>
-                  目录不存在或无法读取
+                  {t("pathNotExist")}
                 </div>
               )}
             </div>
           )}
 
           <div className="flex justify-end gap-2 mt-1">
-            <Button variant="secondary" size="sm" onClick={resetForm}>取消</Button>
-            <Button size="sm" onClick={handleSave}>保存</Button>
+            <Button variant="secondary" size="sm" onClick={resetForm}>{t("common:cancel")}</Button>
+            <Button size="sm" onClick={handleSave}>{t("common:save")}</Button>
           </div>
         </div>
       )}

@@ -358,6 +358,7 @@ impl TerminalService {
     }
 
     /// 创建新的终端会话
+    #[allow(clippy::too_many_arguments)]
     pub fn create_session(
         &self,
         app_handle: AppHandle,

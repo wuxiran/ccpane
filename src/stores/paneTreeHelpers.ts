@@ -21,7 +21,6 @@ export function createPanel(tab?: Tab): Panel {
     id,
     tabs: [defaultTab],
     activeTabId: defaultTab.id,
-    viewMode: "tabs",
   };
 }
 

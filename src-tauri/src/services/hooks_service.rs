@@ -1,7 +1,7 @@
 use serde::Serialize;
 use serde_json::json;
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 /// Hook 名称常量
 const HOOK_SESSION_INJECT: &str = "session-inject";
@@ -119,9 +119,7 @@ impl HooksService {
             return Ok(debug_candidate);
         }
 
-        Err(format!(
-            "cc-panes-hook binary not found. Please build it first: cargo build -p cc-panes-hook"
-        ))
+        Err("cc-panes-hook binary not found. Please build it first: cargo build -p cc-panes-hook".to_string())
     }
 
     /// 查找 workspace 根目录（包含 Cargo.toml 的最上层目录）
@@ -276,7 +274,7 @@ impl HooksService {
     }
 
     /// 构建单个 hook 的 command 字符串
-    fn build_hook_command(binary_path: &PathBuf, def: &HookDef) -> String {
+    fn build_hook_command(binary_path: &Path, def: &HookDef) -> String {
         let path_str = binary_path.to_string_lossy().replace('\\', "\\\\");
         format!("\"{}\" {}", path_str, def.subcommand)
     }
@@ -285,7 +283,7 @@ impl HooksService {
     fn register_single_hook_in_settings(
         project_path: &str,
         def: &HookDef,
-        binary_path: &PathBuf,
+        binary_path: &Path,
     ) -> Result<(), String> {
         let settings_path = PathBuf::from(project_path)
             .join(".claude")
@@ -356,7 +354,7 @@ impl HooksService {
     /// 注册所有 hooks 到 .claude/settings.local.json
     fn register_hooks_in_settings(
         project_path: &str,
-        binary_path: &PathBuf,
+        binary_path: &Path,
     ) -> Result<(), String> {
         let settings_path = PathBuf::from(project_path)
             .join(".claude")

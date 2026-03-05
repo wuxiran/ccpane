@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { Clock, FileText, Tag, RefreshCw, GitBranch, FolderGit2 } from "lucide-react";
 import {
   Dialog,
@@ -19,6 +20,7 @@ interface RecentChangesPanelProps {
 }
 
 export default function RecentChangesPanel({ open, onOpenChange, projectPath, onOpenFileHistory }: RecentChangesPanelProps) {
+  const { t } = useTranslation(["dialogs", "common"]);
   const [changes, setChanges] = useState<RecentChange[]>([]);
   const [worktreeChanges, setWorktreeChanges] = useState<WorktreeRecentChange[]>([]);
   const [loading, setLoading] = useState(false);
@@ -118,13 +120,13 @@ export default function RecentChangesPanel({ open, onOpenChange, projectPath, on
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Clock size={18} />
-            最近更改
+            {t("recentChangesTitle")}
             <div className="ml-auto flex items-center gap-2">
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => setShowAllWorktrees(!showAllWorktrees)}
-                title="查看所有 Worktree 的变更"
+                title={t("recentChangesAllWorktrees")}
                 style={showAllWorktrees ? { background: "var(--app-active-bg)", color: "var(--app-accent)" } : undefined}
               >
                 <FolderGit2 size={14} />
@@ -139,19 +141,19 @@ export default function RecentChangesPanel({ open, onOpenChange, projectPath, on
         <div className="max-h-[500px] overflow-y-auto">
           {loading ? (
             <div className="flex items-center justify-center py-16" style={{ color: "var(--app-text-tertiary)" }}>
-              加载中...
+              {t("common:loading")}
             </div>
           ) : !showAllWorktrees ? (
             changes.length === 0 ? (
               <div className="flex items-center justify-center py-16" style={{ color: "var(--app-text-tertiary)" }}>
-                暂无变更记录
+                {t("recentChangesNoChanges")}
               </div>
             ) : (
               changes.map((change) => renderChangeItem(change))
             )
           ) : groupedWorktreeChanges.length === 0 ? (
             <div className="flex items-center justify-center py-16" style={{ color: "var(--app-text-tertiary)" }}>
-              暂无变更记录
+              {t("recentChangesNoChanges")}
             </div>
           ) : (
             groupedWorktreeChanges.map((group) => (
@@ -166,9 +168,9 @@ export default function RecentChangesPanel({ open, onOpenChange, projectPath, on
                   </span>
                   <Badge variant="outline" className="text-[10px] px-1 h-4" style={{ borderColor: "#6366f1", color: "#6366f1" }}>
                     <GitBranch size={10} className="mr-1" />
-                    {group.branch || "未知分支"}
+                    {group.branch || t("recentChangesUnknownBranch")}
                   </Badge>
-                  {group.isMain && <Badge variant="secondary" className="text-[10px] px-1 h-4 shrink-0">主仓库</Badge>}
+                  {group.isMain && <Badge variant="secondary" className="text-[10px] px-1 h-4 shrink-0">{t("recentChangesMainRepo")}</Badge>}
                 </div>
                 {group.changes.map((change) => renderChangeItem(change, true))}
               </div>

@@ -2,7 +2,7 @@ use crate::models::provider::Provider;
 use crate::services::ProviderService;
 use crate::utils::AppResult;
 use serde::Serialize;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tauri::{AppHandle, State};
 
@@ -71,16 +71,23 @@ pub struct ConfigDirInfo {
     pub files: Vec<String>,
 }
 
-/// 读取 Claude Code 配置目录信息
+/// 读取 Claude Code 配置目录或 ccswitch 配置文件信息
 #[tauri::command]
 pub fn read_config_dir_info(path: String) -> AppResult<ConfigDirInfo> {
-    let dir = Path::new(&path);
-    if !dir.is_dir() {
-        return Err(format!("路径不存在或不是目录: {}", path).into());
+    let p = PathBuf::from(&path);
+
+    if p.is_file() {
+        // 文件模式：解析 JSON 配置文件（ccswitch 格式）
+        return read_config_file_info(&p, path);
     }
 
+    if !p.is_dir() {
+        return Err(format!("路径不存在: {}", path).into());
+    }
+
+    // 目录模式：保持原有行为
     let mut files = Vec::new();
-    if let Ok(entries) = std::fs::read_dir(dir) {
+    if let Ok(entries) = std::fs::read_dir(&p) {
         for entry in entries.flatten() {
             if let Some(name) = entry.file_name().to_str() {
                 files.push(name.to_string());
@@ -89,11 +96,11 @@ pub fn read_config_dir_info(path: String) -> AppResult<ConfigDirInfo> {
     }
     files.sort();
 
-    let has_settings = dir.join("settings.json").is_file();
-    let has_credentials = dir.join(".credentials.json").is_file();
+    let has_settings = p.join("settings.json").is_file();
+    let has_credentials = p.join(".credentials.json").is_file();
 
     let settings_summary = if has_settings {
-        std::fs::read_to_string(dir.join("settings.json"))
+        std::fs::read_to_string(p.join("settings.json"))
             .ok()
             .and_then(|content| {
                 serde_json::from_str::<serde_json::Value>(&content).ok()
@@ -125,6 +132,35 @@ pub fn read_config_dir_info(path: String) -> AppResult<ConfigDirInfo> {
         has_credentials,
         settings_summary,
         files,
+    })
+}
+
+/// 读取 ccswitch JSON 配置文件信息
+fn read_config_file_info(file_path: &Path, path: String) -> AppResult<ConfigDirInfo> {
+    let content = std::fs::read_to_string(file_path)
+        .map_err(|e| format!("无法读取文件: {}", e))?;
+
+    let json: serde_json::Value = serde_json::from_str(&content)
+        .map_err(|e| format!("JSON 解析失败: {}", e))?;
+
+    let env_keys: Vec<String> = json
+        .get("env")
+        .and_then(|v| v.as_object())
+        .map(|obj| obj.keys().cloned().collect())
+        .unwrap_or_default();
+
+    let summary = if env_keys.is_empty() {
+        None
+    } else {
+        Some(format!("env 变量 ({}): {}", env_keys.len(), env_keys.join(", ")))
+    };
+
+    Ok(ConfigDirInfo {
+        path,
+        has_settings: false,
+        has_credentials: false,
+        settings_summary: summary,
+        files: env_keys,
     })
 }
 

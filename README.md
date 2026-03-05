@@ -1,7 +1,193 @@
-# Tauri + Vue + TypeScript
+# CC-Panes
 
-This template should help get you started developing with Vue 3 and TypeScript in Vite. The template uses Vue 3 `<script setup>` SFCs, check out the [script setup docs](https://v3.vuejs.org/api/sfc-script-setup.html#sfc-script-setup) to learn more.
+> Multi-instance split-pane manager for [Claude Code](https://docs.anthropic.com/en/docs/claude-code) — a cross-platform desktop app built with Tauri 2.
 
-## Recommended IDE Setup
+[![License: GPL-3.0](https://img.shields.io/badge/License-GPL--3.0-blue.svg)](LICENSE)
+[![Built with Tauri](https://img.shields.io/badge/Built%20with-Tauri%202-FFC131?logo=tauri)](https://v2.tauri.app/)
+[![React 19](https://img.shields.io/badge/React-19-61DAFB?logo=react)](https://react.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.6-3178C6?logo=typescript)](https://www.typescriptlang.org/)
 
-- [VS Code](https://code.visualstudio.com/) + [Vue - Official](https://marketplace.visualstudio.com/items?itemName=Vue.volar) + [Tauri](https://marketplace.visualstudio.com/items?itemName=tauri-apps.tauri-vscode) + [rust-analyzer](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer)
+[中文文档](README.zh-CN.md)
+
+<p align="center">
+  <img src="docs/images/screenshot-main.png" alt="CC-Panes Main Interface" width="800" />
+</p>
+
+## What is CC-Panes?
+
+CC-Panes lets you run **multiple Claude Code CLI instances** side by side in a split-pane terminal layout. Organize your AI-powered development workflow with workspaces, projects, and tasks — all from a single desktop app.
+
+## Features
+
+- **Split-Pane Terminal** — Run multiple terminals in flexible horizontal/vertical split layouts with drag-to-resize
+- **Workspace Management** — Organize projects into workspaces with pinning, hiding, and reordering
+- **Built-in Terminal** — Full-featured terminal (xterm.js + PTY) with multi-tab support
+- **Claude Code Integration** — Launch Claude Code sessions, resume conversations, manage providers, and self-dialogue mode
+- **Git Integration** — Branch status, pull/push/fetch/stash, worktree management, and git clone
+- **Session Management** — Track launch history with recent launches panel, clean broken sessions, and resume previous work
+- **Local History** — File version tracking with diff view, labels, branch-aware snapshots, and restore
+- **Session Journal** — Workspace-level session logging
+- **Todo & Plans** — Task management with priorities, subtasks, and plan archiving
+- **Memory & Skills** — Manage Claude memories and custom skills per project
+- **MCP Server Config** — Configure MCP servers per project
+- **Hooks/Workflows** — Workspace-level hook system for automation
+- **Provider Management** — Multiple API provider support (Anthropic, Bedrock, Vertex, proxy, config profiles)
+- **Directory Scan Import** — Batch import Git repositories from a directory
+- **Theme Support** — Light/dark mode with glassmorphism design
+- **Borderless, Mini & Fullscreen** — Frameless window mode, compact mini view, and F11 fullscreen toggle
+- **System Tray** — Minimize to tray with status monitoring
+- **Desktop Notifications** — Session exit, waiting-for-input, and todo reminder alerts with debounce
+- **Keyboard Shortcuts** — Customizable shortcuts for all major actions
+- **i18n** — English and Chinese (Simplified) interface
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  React Frontend                                             │
+│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌───────────────┐  │
+│  │ Sidebar  │ │ Panes    │ │ Panels   │ │ UI Components │  │
+│  └────┬─────┘ └────┬─────┘ └────┬─────┘ └───────────────┘  │
+│       │             │            │                           │
+│  ┌────┴─────────────┴────────────┴────┐                     │
+│  │  Services (invoke) + Stores        │                     │
+│  └────────────────┬───────────────────┘                     │
+├───────────────────┼─────────────────────────────────────────┤
+│  Tauri IPC        │                                         │
+├───────────────────┼─────────────────────────────────────────┤
+│  Rust Backend     │                                         │
+│  ┌────────────────┴───────────────────┐                     │
+│  │  Commands → Services → Repository  │                     │
+│  └────────────────┬───────────────────┘                     │
+│  ┌────────────────┴───────────────────┐                     │
+│  │  SQLite / File System / PTY        │                     │
+│  └────────────────────────────────────┘                     │
+└─────────────────────────────────────────────────────────────┘
+```
+
+## Tech Stack
+
+| Layer | Technology | Purpose |
+|-------|-----------|---------|
+| Desktop Framework | Tauri 2 | Rust backend + system WebView |
+| Frontend | React 19 + TypeScript | UI components |
+| State Management | Zustand 5 + Immer | Immutable state updates |
+| UI Library | shadcn/ui + Radix UI | Component library |
+| Styling | Tailwind CSS 4 | Utility-first CSS |
+| Terminal | xterm.js + portable-pty | Frontend rendering + backend PTY |
+| Split Panes | Allotment | Resizable split layout |
+| Data Storage | SQLite (rusqlite) | Local persistence |
+| Icons | Lucide React | SVG icons |
+| Build Tool | Vite 6 | Frontend bundler |
+
+## Prerequisites
+
+- [Node.js](https://nodejs.org/) 22+
+- [Rust](https://rustup.rs/) 1.83+
+- Platform-specific dependencies for [Tauri](https://v2.tauri.app/start/prerequisites/)
+
+## Getting Started
+
+```bash
+# Clone the repository
+git clone https://github.com/wuxiran/cc-panes.git
+cd cc-panes
+
+# Install frontend dependencies
+npm install
+
+# Run in development mode (frontend + Rust backend)
+npm run tauri dev
+```
+
+## Build
+
+```bash
+# Build the production app
+npm run tauri build
+```
+
+The built application will be in `src-tauri/target/release/bundle/`.
+
+## Development
+
+```bash
+# Frontend type check
+npx tsc --noEmit
+
+# Run frontend tests
+npm run test:run
+
+# Rust check
+cargo check --workspace
+
+# Rust lint
+cargo clippy --workspace -- -D warnings
+
+# Rust format check
+cargo fmt --all -- --check
+
+# Run Rust tests
+cargo test --workspace
+```
+
+## Project Structure
+
+```
+cc-panes/
+├── src/                    # React frontend
+│   ├── components/         # React components
+│   │   ├── panes/          # Split-pane terminal components
+│   │   ├── sidebar/        # Sidebar components
+│   │   ├── settings/       # Settings sub-components
+│   │   ├── memory/         # Memory management
+│   │   ├── skill/          # Skill management
+│   │   ├── todo/           # Todo management
+│   │   └── ui/             # shadcn/ui base components
+│   ├── stores/             # Zustand state management
+│   ├── services/           # Frontend service layer (invoke wrappers)
+│   ├── hooks/              # Custom React hooks
+│   ├── types/              # TypeScript type definitions
+│   ├── i18n/               # Internationalization
+│   └── utils/              # Utility functions
+│
+├── src-tauri/              # Tauri Rust backend
+│   └── src/
+│       ├── commands/        # Tauri IPC command handlers
+│       ├── services/        # Business logic layer
+│       ├── repository/      # Data access layer (SQLite)
+│       ├── models/          # Data models
+│       └── utils/           # Utilities (AppPaths, AppError)
+│
+└── docs/                   # Documentation & screenshots
+```
+
+## Screenshots
+
+<details>
+<summary>More screenshots</summary>
+
+| Split Pane Layout | Panel View |
+|:-:|:-:|
+| ![Split Pane](docs/images/screenshot-no-layout.png) | ![Panel](docs/images/screenshot-panel.png) |
+
+| Todo List | New UI |
+|:-:|:-:|
+| ![Todo](docs/images/screenshot-todolist.png) | ![New UI](docs/images/screenshot-new-ui.png) |
+
+</details>
+
+## Contributing
+
+Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+## License
+
+This project is licensed under the [GNU General Public License v3.0](LICENSE).
+
+## Acknowledgments
+
+- [Tauri](https://tauri.app/) — Desktop application framework
+- [Claude Code](https://docs.anthropic.com/en/docs/claude-code) — AI coding assistant by Anthropic
+- [xterm.js](https://xtermjs.org/) — Terminal emulator for the web
+- [shadcn/ui](https://ui.shadcn.com/) — UI component library

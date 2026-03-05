@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { parseKeyEvent, formatKeyCombo, findConflict } from "@/stores";
 import type { ShortcutSettings } from "@/types";
@@ -8,30 +9,37 @@ interface ShortcutsSectionProps {
   onChange: (value: ShortcutSettings) => void;
 }
 
-const actionLabels: Record<string, string> = {
-  "toggle-sidebar": "折叠/展开侧边栏",
-  "toggle-fullscreen": "切换全屏",
-  "new-tab": "新建标签",
-  "close-tab": "关闭标签",
-  settings: "打开设置",
-  "split-right": "向右分屏",
-  "split-down": "向下分屏",
-  "next-tab": "下一个标签",
-  "prev-tab": "上一个标签",
-  "toggle-mini-mode": "切换迷你模式",
-  "switch-tab-1": "切换到标签 1",
-  "switch-tab-2": "切换到标签 2",
-  "switch-tab-3": "切换到标签 3",
-  "switch-tab-4": "切换到标签 4",
-  "switch-tab-5": "切换到标签 5",
-  "switch-tab-6": "切换到标签 6",
-  "switch-tab-7": "切换到标签 7",
-  "switch-tab-8": "切换到标签 8",
-  "switch-tab-9": "切换到标签 9",
+/** Action key to shortcuts namespace i18n key mapping */
+const actionI18nKeys: Record<string, string> = {
+  "toggle-sidebar": "toggle-sidebar",
+  "toggle-fullscreen": "toggle-fullscreen",
+  "new-tab": "new-tab",
+  "close-tab": "close-tab",
+  settings: "settings",
+  "split-right": "split-right",
+  "split-down": "split-down",
+  "next-tab": "next-tab",
+  "prev-tab": "prev-tab",
+  "toggle-mini-mode": "toggle-mini-mode",
 };
 
 export default function ShortcutsSection({ value, onChange }: ShortcutsSectionProps) {
+  const { t } = useTranslation(["settings", "shortcuts"]);
   const [editingAction, setEditingAction] = useState<string | null>(null);
+
+  /** Map action keys to their i18n labels */
+  function getActionLabel(action: string): string {
+    // switch-tab-N -> use the parameterized key "switch-tab" with index
+    const switchTabMatch = action.match(/^switch-tab-(\d+)$/);
+    if (switchTabMatch) {
+      return t("shortcuts:switch-tab", { index: switchTabMatch[1] });
+    }
+    // Other actions use the static mapping
+    if (action in actionI18nKeys) {
+      return t(`shortcuts:${actionI18nKeys[action]}` as "shortcuts:toggle-sidebar");
+    }
+    return action;
+  }
 
   function handleKeyDown(e: React.KeyboardEvent) {
     if (!editingAction) return;
@@ -48,7 +56,7 @@ export default function ShortcutsSection({ value, onChange }: ShortcutsSectionPr
 
     const conflict = findConflict(value.bindings, editingAction, combo);
     if (conflict) {
-      toast.warning(`快捷键 ${combo} 已被「${actionLabels[conflict] || conflict}」使用`);
+      toast.warning(t("settings:shortcutConflict", { combo, label: getActionLabel(conflict) }));
       return;
     }
 
@@ -60,10 +68,10 @@ export default function ShortcutsSection({ value, onChange }: ShortcutsSectionPr
   return (
     <div className="flex flex-col gap-3 outline-none" tabIndex={-1} onKeyDown={handleKeyDown}>
       <h3 className="text-[15px] font-semibold mb-1" style={{ color: "var(--app-text-primary)" }}>
-        快捷键设置
+        {t("settings:shortcutsTitle")}
       </h3>
       <p className="text-xs" style={{ color: "var(--app-text-tertiary)" }}>
-        点击快捷键后按下新组合键进行修改，按 Esc 取消
+        {t("settings:shortcutsHint")}
       </p>
 
       <div className="flex flex-col gap-0.5">
@@ -74,7 +82,7 @@ export default function ShortcutsSection({ value, onChange }: ShortcutsSectionPr
             style={{ borderBottom: "1px solid var(--app-border)" }}
           >
             <span className="text-[13px]" style={{ color: "var(--app-text-secondary)" }}>
-              {actionLabels[action] || action}
+              {getActionLabel(action)}
             </span>
             <button
               className="text-xs px-2.5 py-[3px] rounded font-mono min-w-[80px] text-center cursor-pointer transition-all"
@@ -85,7 +93,7 @@ export default function ShortcutsSection({ value, onChange }: ShortcutsSectionPr
               }}
               onClick={() => setEditingAction(action)}
             >
-              {editingAction === action ? "按下新快捷键..." : formatKeyCombo(combo)}
+              {editingAction === action ? t("settings:pressNewKey") : formatKeyCombo(combo)}
             </button>
           </div>
         ))}

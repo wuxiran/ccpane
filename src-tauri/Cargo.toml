@@ -1,8 +1,13 @@
 [package]
 name = "cc-panes"
-version = "0.1.0"
-description = "CC-Panes - Claude Code 多实例分屏管理"
-authors = ["you"]
+version = "0.94.0"
+description = "CC-Panes - Multi-instance split-pane manager for Claude Code"
+authors = ["wuxiran"]
+license = "GPL-3.0"
+repository = "https://github.com/wuxiran/cc-panes"
+homepage = "https://github.com/wuxiran/cc-panes"
+keywords = ["claude-code", "terminal", "split-pane", "tauri"]
+categories = ["development-tools", "gui"]
 edition = "2021"
 
 [lib]
@@ -34,6 +39,9 @@ similar = "2"
 flate2 = "1"
 encoding_rs = "0.8"
 portable-pty = "0.8"
+
+[dev-dependencies]
+tempfile = "3"
 
 [target.'cfg(windows)'.dependencies]
 windows = { version = "0.62", features = [

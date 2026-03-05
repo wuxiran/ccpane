@@ -6,11 +6,12 @@
 export interface Tab {
   id: string;
   title: string;
-  contentType: "terminal"; // 未来可扩展: 'editor' | 'logs' 等
+  contentType: "terminal" | "mcp-config" | "skill-manager" | "memory-manager";
   projectId: string;
   projectPath: string;
   sessionId: string | null; // 终端特有，其他类型可忽略
   pinned?: boolean;
+  minimized?: boolean;
   resumeId?: string; // Claude resume 会话 ID
   workspaceName?: string; // 所属工作空间名称（用于启动 TUI）
   providerId?: string; // 关联的 Provider ID
