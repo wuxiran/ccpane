@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { describeAutoApproved, useAgentChatStore } from "./useAgentChatStore";
+import { describeAutoApproved } from "./agentChatEvents";
+import { useAgentChatStore } from "./useAgentChatStore";
 import type { AcpChatSnapshot } from "@/types/agentChat";
 
 const CHAT = "tab-acp-test";

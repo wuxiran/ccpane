@@ -22,7 +22,8 @@ import { browserService } from "@/services/browserService";
 // 直接 import 具体模块而非桶文件：destroyPipeline 的测试 mock 的是具体模块，
 // 走桶文件会绕过 mock，表现成「回收没发生」（CLAUDE.md 已记这条坑）。
 import { agentChatService } from "@/services/agentChatService";
-import { dropAgentChatState, useAgentChatStore } from "@/stores/useAgentChatStore";
+import { dropAgentChatState } from "@/stores/agentChatEvents";
+import { useAgentChatStore } from "@/stores/useAgentChatStore";
 import { dshService } from "@/services/dshService";
 import { isTauriRuntime } from "@/services/runtime";
 import { terminalService } from "@/services/terminalService";

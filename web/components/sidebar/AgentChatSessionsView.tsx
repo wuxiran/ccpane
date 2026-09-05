@@ -10,7 +10,7 @@ import { agentChatService } from "@/services/agentChatService";
 import { setPendingResume } from "@/components/agentchat/pendingResume";
 import { navigateToSettings } from "@/components/settings/settingsNavigation";
 import { useActivityBarStore, usePanesStore, useWorkspacesStore } from "@/stores";
-import { AGENT_CHAT_HISTORY_CHANGED_EVENT } from "@/stores/useAgentChatStore";
+import { AGENT_CHAT_HISTORY_CHANGED_EVENT } from "@/stores/agentChatEvents";
 import { handleErrorSilent } from "@/utils/errorHandler";
 
 function projectNameOf(cwd: string): string {

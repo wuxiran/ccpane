@@ -7,42 +7,20 @@
 // 拆分（行数棘轮）：条目渲染在 ChatItems，输入区在 ChatComposer，引擎选择页
 // 在 EnginePicker——本文件只管会话壳（头部/滚动/审批/生命周期动作）。
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-  ArrowDown,
-  Bot,
-  ChevronsDownUp,
-  ChevronsUpDown,
-  ClipboardCopy,
-  Copy,
-  Cpu,
-  FileDiff,
-  GitFork,
-  Loader2,
-  MoreHorizontal,
-  RotateCcw,
-  SlidersHorizontal,
-} from "lucide-react";
+import { ArrowDown, Cpu, RotateCcw, SlidersHorizontal } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import type { Tab } from "@/types";
 import type { AcpPlanEntry, AgentChatItem } from "@/types/agentChat";
 import { agentChatService } from "@/services/agentChatService";
 import { todoService } from "@/services/todoService";
-import {
-  ensureAgentChatListener,
-  useAgentChatStore,
-} from "@/stores/useAgentChatStore";
+import { ensureAgentChatListener } from "@/stores/agentChatEvents";
+import { useAgentChatStore } from "@/stores/useAgentChatStore";
 import { usePanesStore } from "@/stores";
 import { useEditorRevealStore } from "@/stores/useEditorRevealStore";
 import { handleErrorSilent } from "@/utils/errorHandler";
-import { IconTooltipButton } from "@/components/ui/IconTooltipButton";
 import ChatChangesPanel, { collectNetChanges } from "./ChatChangesPanel";
 import ChatComposer from "./ChatComposer";
+import ChatSessionHeader from "./ChatSessionHeader";
 import ChatTurnView from "./ChatTurnView";
 import ChatWelcome from "./ChatWelcome";
 import ConfigOptionSelectors from "./ConfigOptionSelectors";
@@ -331,73 +309,23 @@ export default function AgentChatTabContent({ tab }: { tab: Tab }) {
   return (
     <div className="flex h-full flex-col overflow-hidden">
       {snapshot ? (
-        <div className="flex h-9 shrink-0 items-center gap-2 border-b border-[var(--app-border)] px-3">
-          <span className="flex h-5 w-5 items-center justify-center rounded-md bg-[var(--app-active-bg)] text-[var(--app-accent)]">
-            <Bot className="h-3 w-3" />
-          </span>
-          <span className="text-xs font-medium text-[var(--app-text-primary)]">
-            {snapshot.engineId}
-          </span>
-          {generating ? (
-            <span className="flex items-center gap-1 text-[11px] text-[var(--app-text-tertiary)]">
-              <Loader2 className="h-3 w-3 animate-spin" /> {t("agentChatThinking")}
-            </span>
-          ) : null}
-          <span className="flex-1" />
-          {changesCount > 0 ? (
-            <button
-              type="button"
-              aria-label={t("agentChatChanges")}
-              className={`flex h-6 items-center gap-1 rounded-md px-1.5 text-[11px] tabular-nums transition-colors hover:bg-[var(--app-hover)] ${
-                showChanges
-                  ? "bg-[var(--app-active-bg)] text-[var(--app-accent)]"
-                  : "text-[var(--app-text-secondary)] hover:text-[var(--app-text-primary)]"
-              }`}
-              onClick={() => setShowChanges((previous) => !previous)}
-            >
-              <FileDiff className="h-3.5 w-3.5" />
-              {changesCount}
-            </button>
-          ) : null}
-          <IconTooltipButton
-            label={toolFold.expanded ? t("agentChatCollapseTools") : t("agentChatExpandTools")}
-            className="h-6 w-6"
-            onClick={() =>
-              setToolFold((previous) => ({ seq: previous.seq + 1, expanded: !previous.expanded }))
-            }
-          >
-            {toolFold.expanded ? (
-              <ChevronsDownUp className="h-3.5 w-3.5" />
-            ) : (
-              <ChevronsUpDown className="h-3.5 w-3.5" />
-            )}
-          </IconTooltipButton>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button
-                type="button"
-                aria-label={t("agentChatMore")}
-                className="flex h-6 w-6 items-center justify-center rounded-md text-[var(--app-text-secondary)] transition-colors hover:bg-[var(--app-hover)] hover:text-[var(--app-text-primary)]"
-              >
-                <MoreHorizontal className="h-3.5 w-3.5" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-52">
-              <DropdownMenuItem
-                disabled={!snapshot.acpSessionId || !effectiveCwd}
-                onSelect={forkToNewTab}
-              >
-                <GitFork /> {t("agentChatContinueNewTab")}
-              </DropdownMenuItem>
-              <DropdownMenuItem disabled={!snapshot.acpSessionId} onSelect={copySessionId}>
-                <Copy /> {t("agentChatCopySessionId")}
-              </DropdownMenuItem>
-              <DropdownMenuItem disabled={!items || items.length === 0} onSelect={copyMarkdown}>
-                <ClipboardCopy /> {t("agentChatExportMarkdown")}
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+        <ChatSessionHeader
+          engineLabel={snapshot.engineId}
+          generating={generating}
+          changesCount={changesCount}
+          showChanges={showChanges}
+          onToggleChanges={() => setShowChanges((previous) => !previous)}
+          toolsExpanded={toolFold.expanded}
+          onToggleTools={() =>
+            setToolFold((previous) => ({ seq: previous.seq + 1, expanded: !previous.expanded }))
+          }
+          canFork={Boolean(snapshot.acpSessionId && effectiveCwd)}
+          onFork={forkToNewTab}
+          canCopySessionId={Boolean(snapshot.acpSessionId)}
+          onCopySessionId={copySessionId}
+          canExport={Boolean(items && items.length > 0)}
+          onExport={copyMarkdown}
+        />
       ) : null}
       <div className="relative flex-1 overflow-hidden">
         <div
