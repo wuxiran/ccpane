@@ -251,6 +251,14 @@ export function useLayoutScopeSync(): void {
   const initialized = useRef(false);
 
   useEffect(() => {
+    // 隔离关闭时不需要任何上下文：直接落到 default 并把遗留 scope 合并回来。
+    // 不能走下面的"等上下文就位"守卫——启动时 expandedWorkspaceId 为 null 且没有
+    // SSH 机器的用户会永远卡在守卫上，合并不触发（0.12.12 实机首跑踩到）。
+    if (!layoutScopePolicy.isolationEnabled) {
+      initialized.current = true;
+      initializeAndApplyScope(DEFAULT_LAYOUT_SCOPE);
+      return;
+    }
     const workspace = workspaceId
       ? workspaces.find((item) => item.id === workspaceId)
       : undefined;

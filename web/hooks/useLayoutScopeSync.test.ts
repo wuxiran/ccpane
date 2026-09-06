@@ -1,5 +1,8 @@
+import { renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { usePanesStore } from "@/stores/usePanesStore";
+import { useSshMachinesStore } from "@/stores/useSshMachinesStore";
+import { useWorkspacesStore } from "@/stores/useWorkspacesStore";
 import { DEFAULT_LAYOUT_SCOPE, collectAllScopeSessionIds, useLayoutScopeStore } from "@/stores/useLayoutScopeStore";
 import { collectPanels, createPanel } from "@/lib/paneTree";
 import {
@@ -7,6 +10,7 @@ import {
   mergeForeignScopesIntoLive,
   resolveLayoutScopeForSync,
   switchLayoutScope,
+  useLayoutScopeSync,
 } from "./useLayoutScopeSync";
 import type { LayoutSnapshotPayload, Tab, Workspace } from "@/types";
 
@@ -223,6 +227,22 @@ describe("隔离关闭（0.12.12 热修默认）", () => {
     expect(liveTabIds().sort()).toEqual(["cur-1", "cur-2", "legacy-a", "legacy-b", "other-1"].sort());
     // 合并过的 scope 被删除，下次启动不会把用户已关掉的标签再捞回来
     expect(Object.keys(useLayoutScopeStore.getState().scopes)).toEqual([DEFAULT_LAYOUT_SCOPE]);
+  });
+
+  it("hook 挂载即合并：没有展开的工作空间、没有 SSH 机器时也不能被上下文守卫挡住", () => {
+    const store = useLayoutScopeStore.getState();
+    store.saveScope(DEFAULT_LAYOUT_SCOPE, scopePayload([
+      tab({ id: "legacy-a", projectPath: "/a", sessionId: "sess-a" }),
+    ], "layout-legacy"));
+    store.setActiveScope("workspace:current");
+    seedLivePanes([tab({ id: "cur-1", projectPath: "/c", sessionId: "sess-c" })], "layout-current");
+    useWorkspacesStore.setState({ workspaces: [], expandedWorkspaceId: null });
+    useSshMachinesStore.setState({ machines: [] } as never);
+
+    renderHook(() => useLayoutScopeSync());
+
+    expect(useLayoutScopeStore.getState().activeScope).toBe(DEFAULT_LAYOUT_SCOPE);
+    expect(liveTabIds().sort()).toEqual(["cur-1", "legacy-a"]);
   });
 
   it("没有外来 scope 时合并是 no-op", () => {
