@@ -5,6 +5,7 @@ import { usePanesStore, useWorkspacesStore } from "@/stores";
 import { useLayoutScopeStore } from "@/stores/useLayoutScopeStore";
 import { createPanel } from "@/lib/paneTree";
 import { historyService, localHistoryService } from "@/services";
+import { layoutScopePolicy } from "./useLayoutScopeSync";
 import { useOpenTerminal } from "./useOpenTerminal";
 
 vi.mock("@/lib/feedback", () => ({
@@ -24,6 +25,7 @@ describe("useOpenTerminal host path guard", () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+    layoutScopePolicy.isolationEnabled = false;
   });
 
   it("blocks a Windows local path before creating a tab on a non-Windows host", () => {
@@ -154,7 +156,9 @@ describe("useOpenTerminal host path guard", () => {
     expect(toastErr).toHaveBeenCalledWith("SSH 机器标识不可用");
   });
 
-  it("从 SSH scope 启动本地终端时使用当前选中 workspace scope", () => {
+  it("从 SSH scope 启动本地终端时使用当前选中 workspace scope（隔离打开时）", () => {
+    // 隔离默认关闭（0.12.12 热修）；本用例验证的是隔离本身的切换语义，显式打开。
+    layoutScopePolicy.isolationEnabled = true;
     vi.spyOn(window.navigator, "platform", "get").mockReturnValue("Linux x86_64");
     vi.spyOn(historyService, "add").mockResolvedValue(1);
     vi.spyOn(localHistoryService, "initProjectHistory").mockResolvedValue(undefined);

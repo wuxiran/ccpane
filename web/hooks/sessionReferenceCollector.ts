@@ -5,6 +5,7 @@
 // would-kill 只看树引用 ∪ 后端活会话，两份日志结构性对不上，「would-kill 报了
 // GC 没报」无法区分误报与口径差，观察期永远攒不出可信样本。
 import { usePanesStore } from "@/stores/usePanesStore";
+import { collectAllScopeSessionIds } from "@/stores/useLayoutScopeStore";
 import { useSelfChatStore } from "@/stores/useSelfChatStore";
 import { terminalService } from "@/services/terminalService";
 import { runnerService } from "@/services/runnerService";
@@ -85,6 +86,8 @@ async function collectBindingSessionIds(status: TaskBindingStatus): Promise<Set<
  */
 export async function collectReferencedSessionIdsAcrossSources(): Promise<Set<string>> {
   const referenced = usePanesStore.getState().collectReferencedSessionIds();
+  // 未激活的布局 scope 里的会话同样被引用；只看当前树会把它们全判成孤儿。
+  for (const id of collectAllScopeSessionIds()) referenced.add(id);
 
   const selfChatPty = useSelfChatStore.getState().activeSession?.ptySessionId;
   if (selfChatPty) referenced.add(selfChatPty);

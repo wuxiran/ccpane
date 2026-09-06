@@ -11,6 +11,8 @@ const ALLOWED_LAYOUT_TRAVERSAL_FILES = {
   "components/panes/DndPaneProvider.tsx": "looks up a DnD target layout by id",
   "components/panes/paneDndRouting.ts": "routes layout-tab DnD ordering",
   "hooks/useLayoutSwitcherSync.ts": "serializes layout switcher metadata",
+  "hooks/useLayoutScopeSync.ts": "merges retired layout-scope snapshot payloads (full arrays, starred included) back into the live tree",
+  "stores/useLayoutScopeStore.ts": "collects session ids across every stored scope payload; iterates the full array so starred mirrors are protected",
   "stores/backendCloseActions.ts": "must include starred mirrors when backend kills a PTY",
   "stores/browserTabActions.ts": "legacy browser-tab lookup spans stored layout roots",
   "lib/paneTree.ts": "owns eachLayoutTreeWithStarred, the sanctioned starred-inclusive traversal for destroy paths",

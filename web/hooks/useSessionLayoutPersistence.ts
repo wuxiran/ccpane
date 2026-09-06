@@ -16,7 +16,7 @@ import {
 import { sessionRestoreService, layoutSnapshotService, terminalService } from "@/services";
 import { getCurrentWindowIfTauri, isTauriRuntime } from "@/services/runtime";
 import { waitForDesktopRuntime, resolveRuntimeKind } from "@/utils/desktopRuntime";
-import { getActiveLayoutScope } from "@/stores/useLayoutScopeStore";
+import { collectAllScopeSessionIds, getActiveLayoutScope } from "@/stores/useLayoutScopeStore";
 import { collectTerminalLeaves } from "@/lib/paneSessions";
 import {
   reconcileTerminalSessions,
@@ -95,7 +95,18 @@ async function saveSharedLayoutSnapshot(): Promise<void> {
   lastSeenLayoutSnapshotSavedAt = savedAt;
 }
 
+/**
+ * 共享布局快照的自动应用开关（0.12.12 热修，默认关）。
+ * 启动时与每 5s 轮询都会把后端里更新的快照**整树替换**进当前面板。这条链路在
+ * 0.12.11 之前因 profileId 带冒号从未生效；生效后，同一 daemon 的另一个客户端
+ * （Web 访问 / 手机端跑的是同一份前端）保存的布局会在 5s 内覆盖桌面端的布局，
+ * 随后的收养 / 清理再把被覆盖掉的会话当孤儿处理。保存照常（跨端只读观察仍可用），
+ * 应用一律跳过，直到有按来源 / 按用户确认的合并策略。
+ */
+const SHARED_LAYOUT_APPLY_ENABLED = false;
+
 async function applySharedLayoutSnapshot(): Promise<boolean> {
+  if (!SHARED_LAYOUT_APPLY_ENABLED) return false;
   const snapshot = await layoutSnapshotService.load(currentLayoutProfileId());
   if (!snapshot?.payload) return false;
   if (snapshot.savedAt && snapshot.savedAt <= lastSeenLayoutSnapshotSavedAt) return false;
@@ -214,14 +225,15 @@ export function useStartupTerminalRestoreBarrier(): boolean {
           setReady(true);
           setTimeout(() => void runBackgroundLayoutRestore(), 0);
           // 陈旧输出 GC（docs/86 B2）：延迟到恢复 settle 后跑，保护集 =
-          // 快照/树引用（含 savedSessionId）∪ 共享引用集。任一来源不可达就
-          // 放弃本轮——保护集残缺只会放大删除面。
+          // 快照/树引用（含 savedSessionId）∪ 所有布局 scope 的引用 ∪ 共享引用集。
+          // 任一来源不可达就放弃本轮——保护集残缺只会放大删除面。
           setTimeout(() => {
             void (async () => {
               try {
                 const protect = new Set(
                   collectSnapshotSessionIds(usePanesStore.getState()),
                 );
+                for (const id of collectAllScopeSessionIds()) protect.add(id);
                 for (const id of await collectReferencedSessionIdsAcrossSources()) {
                   protect.add(id);
                 }
@@ -345,6 +357,7 @@ export function useSharedLayoutSnapshotSync(): void {
               // ——少一路保护集只会**放大**杀集，方向与「宁可不杀」相反。
               const state = usePanesStore.getState();
               const protect = new Set(collectSnapshotSessionIds(state));
+              for (const id of collectAllScopeSessionIds()) protect.add(id);
               let live: Set<string>;
               try {
                 const statuses = await terminalService.getAllStatus();

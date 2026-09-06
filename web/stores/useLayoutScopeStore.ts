@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { collectTerminalSessionIdsWithSavedFromTree } from "@/lib/paneSessions";
 import type { LayoutSnapshotPayload } from "@/types";
 import { DEFAULT_LAYOUT_SCOPE, type LayoutScope } from "@/utils/layoutScope";
 
@@ -11,6 +12,7 @@ export interface LayoutScopeState {
   activeScope: LayoutScope;
   saveScope: (scope: LayoutScope, payload: LayoutSnapshotPayload) => void;
   getScope: (scope: LayoutScope) => LayoutSnapshotPayload | undefined;
+  removeScope: (scope: LayoutScope) => void;
   setActiveScope: (scope: LayoutScope) => void;
   reset: () => void;
   resetForTest: () => void;
@@ -31,6 +33,21 @@ export function getActiveLayoutScope(): LayoutScope {
   return useLayoutScopeStore.getState().activeScope;
 }
 
+/**
+ * 所有 scope（含未激活的）里引用的会话 id。任何"哪些会话还有人要"的保护集都必须
+ * 并上这一份：当前面板树只是活动 scope，别的 scope 里的会话同样是用户的。
+ * 0.12.11 的输出清理只看当前树，把其他工作空间的几百个会话输出当垃圾删了。
+ */
+export function collectAllScopeSessionIds(): Set<string> {
+  const ids = new Set<string>();
+  for (const payload of Object.values(useLayoutScopeStore.getState().scopes)) {
+    for (const layout of payload.layouts) {
+      for (const id of collectTerminalSessionIdsWithSavedFromTree(layout.rootPane)) ids.add(id);
+    }
+  }
+  return ids;
+}
+
 export const useLayoutScopeStore = create<LayoutScopeState>()(
   persist(
     (set, get) => ({
@@ -42,6 +59,12 @@ export const useLayoutScopeStore = create<LayoutScopeState>()(
         const payload = get().scopes[scope];
         return payload ? clonePayload(payload) : undefined;
       },
+      removeScope: (scope) => set((state) => {
+        if (!(scope in state.scopes)) return {};
+        const scopes = { ...state.scopes };
+        delete scopes[scope];
+        return { scopes };
+      }),
       setActiveScope: (activeScope) => set({ activeScope }),
       reset: () => set({
         scopes: {},
