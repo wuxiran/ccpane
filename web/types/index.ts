@@ -179,3 +179,7 @@ export type {
   PlanCollaborationEntry,
   PlanCollaboration,
 } from "./orchestrator";
+export type {
+  LinkState, LinkAgent, LinkWorkspace, SkillAgentState, ManagedSkill, LinkSnapshot,
+  EnableCounts, DisableCounts, UpdateOutcome, AddWorkspaceOutcome,
+} from "./linkSkill";

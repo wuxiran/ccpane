@@ -613,7 +613,7 @@ fn detect_in_sessions(
 
     // 按 mtime 倒序，确保同 cwd 多个候选时取最新（并发/重启场景）。
     let mut sessions = sessions;
-    sessions.sort_by(|a, b| b.modified_at.cmp(&a.modified_at));
+    sessions.sort_by_key(|session| std::cmp::Reverse(session.modified_at));
 
     for session in sessions {
         let modified_at =

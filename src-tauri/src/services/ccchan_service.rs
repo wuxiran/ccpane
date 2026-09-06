@@ -1046,18 +1046,17 @@ fn parse_claude_stream_line(line: &str) -> Option<ParsedClaudeLine> {
                 .and_then(Value::as_str)
                 .and_then(structured_status);
         }
-        "result" => {
+        "result"
             if value
                 .get("is_error")
                 .and_then(Value::as_bool)
-                .unwrap_or(false)
-            {
-                parsed.error = value
-                    .get("error")
-                    .or_else(|| value.get("result"))
-                    .and_then(Value::as_str)
-                    .map(str::to_string);
-            }
+                .unwrap_or(false) =>
+        {
+            parsed.error = value
+                .get("error")
+                .or_else(|| value.get("result"))
+                .and_then(Value::as_str)
+                .map(str::to_string);
         }
         _ => {}
     }

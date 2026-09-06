@@ -50,3 +50,4 @@ export { sharedMcpService } from "./sharedMcpService";
 export { sessionRestoreService } from "./sessionRestoreService";
 export { workspaceSnapshotService } from "./workspaceSnapshotService";
 export { taskBindingService } from "./taskBindingService";
+export { linkSkillService } from "./linkSkillService";

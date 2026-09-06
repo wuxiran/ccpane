@@ -41,3 +41,5 @@ export { useUsageStatsStore } from "./useUsageStatsStore";
 export { useSharedMcpStore } from "./useSharedMcpStore";
 export { useOrchestratorStore } from "./useOrchestratorStore";
 export { useVoiceInputStore } from "./useVoiceInputStore";
+export { useLinkSkillStore } from "./useLinkSkillStore";
+export type { LinkStatusFilter, LinkTargetAgent } from "./useLinkSkillStore";

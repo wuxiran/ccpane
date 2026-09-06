@@ -2,6 +2,7 @@ pub mod external_skill;
 pub mod filesystem;
 mod history;
 pub mod launch_profile;
+pub mod link_skill;
 pub mod plan;
 pub mod process_info;
 mod project;
@@ -46,6 +47,10 @@ pub use launch_profile::{
     LaunchProfileMcpPolicy, LaunchProfilePreviewRequest, LaunchProfileResolution,
     LaunchProfileSkillMode, LaunchProfileSkillPolicy, LaunchProviderSelection, ResolvedMcpServer,
     ResolvedSkill, SharedMcpUrls,
+};
+pub use link_skill::{
+    AddWorkspaceOutcome, DisableCounts, EnableCounts, LinkAgent, LinkSnapshot, LinkState,
+    LinkWorkspace, ManagedSkill, SkillAgentState, UpdateOutcome,
 };
 pub use process_info::{ClaudeProcess, ClaudeProcessType, ProcessScanResult, ResourceStats};
 pub use project::Project;

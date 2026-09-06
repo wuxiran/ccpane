@@ -164,6 +164,13 @@ use commands::{
     kill_claude_processes,
     kill_terminal,
     kill_terminal_idempotent,
+    link_add_workspace,
+    link_annotate_repo,
+    link_disable,
+    link_enable,
+    link_set_workspace,
+    link_snapshot,
+    link_update,
     list_all_claude_sessions,
     list_claude_sessions,
     list_cli_tools,
@@ -319,10 +326,10 @@ use services::{
     LaunchProfileService, McpConfigService, MemoryService, NotificationService,
     OrchestratorService, PlanArchiveService, PlanService, ProcessMonitorService,
     ProjectCliHooksService, ProjectContextService, ProjectService, ProviderService,
-    ScreenshotService, SessionRestoreService, SettingsService, SharedMcpService,
-    SkillMarketService, SkillService, SpecService, SshCredentialService, SshMachineService,
-    StartLocks, TaskBindingService, TerminalService, TodoService, UsageStatsService,
-    WorkspaceService, WorktreeService,
+    ScreenshotService, SessionRestoreService, SettingsService, SharedMcpService, SkillLinkService,
+    SkillMarketService, SkillRemoteUpdateService, SkillService, SpecService, SshCredentialService,
+    SshMachineService, StartLocks, TaskBindingService, TerminalService, TodoService,
+    UsageStatsService, WorkspaceService, WorktreeService,
 };
 use std::sync::Arc;
 use utils::AppPaths;
@@ -960,6 +967,12 @@ pub fn run() {
         app_paths.skills_dir(),
         app_paths.user_skills_dir(),
     ));
+    let skill_link_config_path = dirs::home_dir()
+        .unwrap_or_else(|| std::path::PathBuf::from("."))
+        .join(".skill-manager")
+        .join("config.json");
+    let skill_link_service = Arc::new(SkillLinkService::new(skill_link_config_path));
+    let skill_remote_update_service = Arc::new(SkillRemoteUpdateService::new());
     let plan_service = Arc::new(PlanService::new());
     let filesystem_service = Arc::new(FileSystemService::new());
     let project_cli_hooks_service = Arc::new(ProjectCliHooksService::new(cli_registry.clone()));
@@ -1059,6 +1072,8 @@ pub fn run() {
         .manage(mcp_config_service)
         .manage(skill_service)
         .manage(skill_market_service)
+        .manage(skill_link_service)
+        .manage(skill_remote_update_service)
         .manage(external_skill_registry)
         .manage(plan_service)
         .manage(plan_archive_service)
@@ -1737,6 +1752,13 @@ pub fn run() {
             delete_skill,
             copy_skill,
             list_skill_market_entries,
+            link_add_workspace,
+            link_annotate_repo,
+            link_disable,
+            link_enable,
+            link_set_workspace,
+            link_snapshot,
+            link_update,
             list_user_skills,
             install_market_skill,
             remove_user_skill,
