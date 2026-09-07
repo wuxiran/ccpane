@@ -90,7 +90,7 @@ export default function SkillManager({ projectPath }: SkillManagerProps) {
           }`}
           onClick={() => setActiveTab("project")}
         >
-          项目 Skills
+          {t("projectSkillsTab")}
         </button>
         <button
           className={`rounded-md px-3 py-1 text-xs font-medium transition-colors ${
@@ -100,7 +100,7 @@ export default function SkillManager({ projectPath }: SkillManagerProps) {
           }`}
           onClick={() => setActiveTab("link")}
         >
-          链接管理（中央仓库）
+          {t("linkTab")}
         </button>
       </div>
 

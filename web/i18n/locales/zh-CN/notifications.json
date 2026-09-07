@@ -34,7 +34,6 @@
   "skillSaved": "Skill 已保存",
   "skillDeleted": "Skill 已删除",
   "operationFailed": "操作失败: {{error}}",
-
   "createFailed": "创建失败: {{error}}",
   "renameFailed": "重命名失败: {{error}}",
   "importFailed": "导入失败: {{error}}",
@@ -46,9 +45,21 @@
   "noGitRepoFound": "未在该目录下发现任何 Git 仓库",
   "scanImportDone": "导入完成: {{imported}} 个成功, {{skipped}} 个跳过（可能已存在）",
   "providerNameRequired": "请输入名称",
-
   "mcpServerUpdated": "MCP Server 已更新",
   "mcpServerAdded": "MCP Server 已添加",
   "mcpServerDeleted": "MCP Server 已删除",
-  "mcpNameCommandRequired": "名称和命令不能为空"
+  "mcpNameCommandRequired": "名称和命令不能为空",
+  "linkEnableDone": "启用完成: 成功 {{ok}}, 跳过 {{skip}}, 副本冲突 {{conflict}}, 仓库无原件 {{nomaster}}, 失败 {{fail}}",
+  "linkDisableDone": "禁用完成: 移除链接 {{ok}}, 跳过 {{skip}}, 保留真实目录 {{protected}}, 失败 {{fail}}",
+  "linkUpdateDone": "已更新 {{count}} 个: {{dirs}}",
+  "linkUpdateNoSource": "{{count}} 个没有远程来源（手工安装），已跳过: {{dirs}}",
+  "linkUpdateProgress": "正在从远程更新 {{count}} 个技能…",
+  "linkUpdatedOne": "{{detail}} 已更新",
+  "linkProjectExists": "该项目已在工作空间列表中",
+  "linkProjectAdded": "已添加项目工作空间【{{name}}】",
+  "linkAddProjectPromptNotify": "输入要管理 Skills 的项目目录完整路径",
+  "linkSelectFirst": "请先勾选技能",
+  "linkProtectedSkip": "真实目录受保护，绝不自动删除",
+  "linkConflictSkip": "真实副本受保护，未改动（可用批量启用+覆盖副本）",
+  "linkAlreadyState": "原本就是该状态"
 }

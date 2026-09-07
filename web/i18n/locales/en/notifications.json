@@ -34,7 +34,6 @@
   "skillSaved": "Skill saved",
   "skillDeleted": "Skill deleted",
   "operationFailed": "Operation failed: {{error}}",
-
   "createFailed": "Create failed: {{error}}",
   "renameFailed": "Rename failed: {{error}}",
   "importFailed": "Import failed: {{error}}",
@@ -46,9 +45,21 @@
   "noGitRepoFound": "No Git repositories found in this directory",
   "scanImportDone": "Import complete: {{imported}} succeeded, {{skipped}} skipped (may already exist)",
   "providerNameRequired": "Name is required",
-
   "mcpServerUpdated": "MCP Server updated",
   "mcpServerAdded": "MCP Server added",
   "mcpServerDeleted": "MCP Server deleted",
-  "mcpNameCommandRequired": "Name and command are required"
+  "mcpNameCommandRequired": "Name and command are required",
+  "linkEnableDone": "Enable done: ok {{ok}}, skipped {{skip}}, conflicts {{conflict}}, no source {{nomaster}}, failed {{fail}}",
+  "linkDisableDone": "Disable done: removed {{ok}}, skipped {{skip}}, copies preserved {{protected}}, failed {{fail}}",
+  "linkUpdateDone": "Updated {{count}}: {{dirs}}",
+  "linkUpdateNoSource": "{{count}} skills have no remote source (manually installed), skipped: {{dirs}}",
+  "linkUpdateProgress": "Updating {{count}} skills from remote…",
+  "linkUpdatedOne": "{{detail}} updated",
+  "linkProjectExists": "This project is already in the workspace list",
+  "linkProjectAdded": "Project workspace added: {{name}}",
+  "linkAddProjectPromptNotify": "Enter the full path of the project directory",
+  "linkSelectFirst": "Select skills first",
+  "linkProtectedSkip": "Real directory is protected and will never be auto-deleted",
+  "linkConflictSkip": "Real copy is protected, unchanged (use batch enable + overwrite)",
+  "linkAlreadyState": "already in this state"
 }

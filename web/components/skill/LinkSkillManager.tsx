@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { RefreshCw, FolderPlus, Download, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { useLinkSkillStore, type LinkStatusFilter } from "@/stores";
+import { useLinkSkillStore } from "@/stores";
 import { linkSkillService } from "@/services";
 import type { LinkState, ManagedSkill } from "@/types";
 
@@ -26,10 +27,11 @@ const LETTERS: Record<string, string> = {
   Grok: "G",
   OpenCode: "O",
 };
-const STATE_LABEL: Record<LinkState, string> = {
-  linked: "✅ 链接",
-  copied: "📄 副本",
-  none: "— 未安装",
+type StateKey = "linkStateLinked" | "linkStateCopied" | "linkStateNone";
+const STATE_KEY: Record<LinkState, StateKey> = {
+  linked: "linkStateLinked",
+  copied: "linkStateCopied",
+  none: "linkStateNone",
 };
 
 function colorOf(agent: string): { fg: string; bg: string } {
@@ -45,18 +47,23 @@ function letterOf(agent: string): string {
   return LETTERS[agent] || agent.charAt(0).toUpperCase();
 }
 
-const FILTERS: Array<{ key: LinkStatusFilter; label: string }> = [
-  { key: "all", label: "全部" },
-  { key: "linked", label: "✅ 已链接" },
-  { key: "copied", label: "📄 副本" },
-  { key: "none", label: "— 未安装" },
+const FILTERS: Array<{
+  key: "all" | "linked" | "copied" | "none";
+  labelKey: "linkFilterAll" | "linkFilterLinked" | "linkFilterCopied" | "linkFilterNone";
+}> = [
+  { key: "all", labelKey: "linkFilterAll" },
+  { key: "linked", labelKey: "linkFilterLinked" },
+  { key: "copied", labelKey: "linkFilterCopied" },
+  { key: "none", labelKey: "linkFilterNone" },
 ];
 
 export default function LinkSkillManager() {
+  const { t } = useTranslation("dialogs");
+  const { t: tNotify } = useTranslation("notifications");
+
   const snapshot = useLinkSkillStore((s) => s.snapshot);
   const loading = useLinkSkillStore((s) => s.loading);
   const busy = useLinkSkillStore((s) => s.busy);
-  const error = useLinkSkillStore((s) => s.error);
   const targetAgent = useLinkSkillStore((s) => s.targetAgent);
   const statusFilter = useLinkSkillStore((s) => s.statusFilter);
   const keyword = useLinkSkillStore((s) => s.keyword);
@@ -80,10 +87,6 @@ export default function LinkSkillManager() {
   useEffect(() => {
     refresh();
   }, [refresh]);
-
-  useEffect(() => {
-    if (error) toast.error(error);
-  }, [error]);
 
   const rows = useMemo(() => {
     if (!snapshot) return [];
@@ -115,16 +118,22 @@ export default function LinkSkillManager() {
     return order.map((repo) => ({ repo, items: byRepo.get(repo)! }));
   }, [rows]);
 
-  const targetName = targetAgent === "*" ? "全部 Agent" : targetAgent;
+  const targetName = targetAgent === "*" ? t("linkTargetAll") : targetAgent;
 
   const handleEnable = async () => {
     try {
       const counts = await enableSelected(overwrite);
       toast.success(
-        `启用完成: 成功 ${counts.ok}, 跳过 ${counts.skip}, 副本冲突 ${counts.conflict}, 仓库无原件 ${counts.nomaster}, 失败 ${counts.fail}`
+        tNotify("linkEnableDone", {
+          ok: counts.ok,
+          skip: counts.skip,
+          conflict: counts.conflict,
+          nomaster: counts.nomaster,
+          fail: counts.fail,
+        })
       );
     } catch (e) {
-      toast.error(`启用失败: ${String(e)}`);
+      toast.error(tNotify("operationFailed", { error: String(e) }));
     }
   };
 
@@ -132,39 +141,46 @@ export default function LinkSkillManager() {
     try {
       const counts = await disableSelected();
       toast.success(
-        `禁用完成: 移除链接 ${counts.ok}, 跳过 ${counts.skip}, 保留真实目录 ${counts.protected}, 失败 ${counts.fail}`
+        tNotify("linkDisableDone", {
+          ok: counts.ok,
+          skip: counts.skip,
+          protected: counts.protected,
+          fail: counts.fail,
+        })
       );
     } catch (e) {
-      toast.error(`禁用失败: ${String(e)}`);
+      toast.error(tNotify("operationFailed", { error: String(e) }));
     }
   };
 
   const handleUpdate = async () => {
     if (selection.size === 0) {
-      toast.warning("请先勾选要更新的技能");
+      toast.warning(tNotify("linkSelectFirst"));
       return;
     }
-    toast.info(`正在从远程更新 ${selection.size} 个技能…`);
+    toast.info(tNotify("linkUpdateProgress", { count: selection.size }));
     try {
       const outcomes = await updateSelected();
       const ok = outcomes.filter((o) => o.status === "updated");
       const skipped = outcomes.filter((o) => o.status === "no-source");
-      if (ok.length > 0) toast.success(`已更新 ${ok.length} 个: ${ok.map((o) => o.dir).join(", ")}`);
+      if (ok.length > 0) toast.success(tNotify("linkUpdateDone", { count: ok.length, dirs: ok.map((o) => o.dir).join(", ") }));
       if (skipped.length > 0)
-        toast.warning(`${skipped.length} 个没有远程来源（手工安装），已跳过: ${skipped.map((o) => o.dir).join(", ")}`);
+        toast.warning(
+          tNotify("linkUpdateNoSource", { count: skipped.length, dirs: skipped.map((o) => o.dir).join(", ") })
+        );
     } catch (e) {
-      toast.error(`更新失败: ${String(e)}`);
+      toast.error(tNotify("operationFailed", { error: String(e) }));
     }
   };
 
   const handleAddWorkspace = async () => {
-    const path = window.prompt("输入要管理 Skills 的项目目录完整路径，例如：K:\\AI\\my-project");
+    const path = window.prompt(t("linkAddProjectPrompt"));
     if (!path) return;
     try {
       const msg = await addWorkspace(path.trim());
       toast.success(msg);
     } catch (e) {
-      toast.error(`添加失败: ${String(e)}`);
+      toast.error(tNotify("operationFailed", { error: String(e) }));
     }
   };
 
@@ -173,20 +189,21 @@ export default function LinkSkillManager() {
     try {
       if (turnOn) {
         const counts = await linkSkillService.enable([dir], agent, null, false);
-        if (counts.fail > 0) toast.error(`${dir} @ ${agent}: 失败`);
-        else if (counts.conflict > 0)
-          toast.warning(`${dir} @ ${agent}: 真实副本受保护，未改动（可用批量启用+覆盖副本）`);
-        else toast.success(`${dir} @ ${agent}: 已启用 ✅${counts.skip ? "（原本就是该状态）" : ""}`);
+        if (counts.fail > 0) toast.error(`${dir} @ ${agent}: ${tNotify("operationFailed", { error: "fail" })}`);
+        else if (counts.conflict > 0) toast.warning(`${dir} @ ${agent}: ${tNotify("linkConflictSkip")}`);
+        else
+          toast.success(
+            `${dir} @ ${agent} → ${t(STATE_KEY.linked)}${counts.skip ? `（${tNotify("linkAlreadyState")}）` : ""}`
+          );
       } else {
         const counts = await linkSkillService.disable([dir], agent, null);
-        if (counts.fail > 0) toast.error(`${dir} @ ${agent}: 失败`);
-        else if (counts.protected > 0)
-          toast.warning(`${dir} @ ${agent}: 真实目录受保护，绝不自动删除`);
-        else toast.success(`${dir} @ ${agent}: 已禁用 ⛔${counts.skip ? "（原本就是该状态）" : ""}`);
+        if (counts.fail > 0) toast.error(`${dir} @ ${agent}: ${tNotify("operationFailed", { error: "fail" })}`);
+        else if (counts.protected > 0) toast.warning(`${dir} @ ${agent}: ${tNotify("linkProtectedSkip")}`);
+        else toast.success(`${dir} @ ${agent} → ${t(STATE_KEY.none)}`);
       }
       await refresh();
     } catch (e) {
-      toast.error(`操作失败: ${String(e)}`);
+      toast.error(tNotify("operationFailed", { error: String(e) }));
     }
   };
 
@@ -207,20 +224,20 @@ export default function LinkSkillManager() {
         </select>
         <div className="flex-1" />
         <Button size="sm" variant="outline" onClick={handleAddWorkspace}>
-          <FolderPlus size={14} className="mr-1" /> 添加项目
+          <FolderPlus size={14} className="mr-1" /> {t("linkAddProject")}
         </Button>
         <Button
           size="sm"
           variant="outline"
           disabled={busy || selection.size === 0}
           onClick={handleUpdate}
-          title="把勾选的技能从其 GitHub 来源仓库更新到最新版"
+          title={t("linkUpdateTooltip")}
         >
           {busy ? <Loader2 size={14} className="mr-1 animate-spin" /> : <Download size={14} className="mr-1" />}
-          更新已选
+          {t("linkUpdateSelected")}
         </Button>
         <Button size="sm" variant="outline" disabled={busy} onClick={() => refresh()}>
-          <RefreshCw size={14} className="mr-1" /> 刷新
+          <RefreshCw size={14} className="mr-1" /> {t("linkRefresh")}
         </Button>
       </div>
 
@@ -241,7 +258,7 @@ export default function LinkSkillManager() {
                 }`}
                 style={{ color: c.fg, background: c.bg, boxShadow: active ? `0 0 0 1px ${c.fg}` : undefined }}
                 onClick={() => setTargetAgent(agent.name)}
-                title="点击设为批量操作目标"
+                title={t("linkTargetTooltip")}
               >
                 {agent.name}: <b>{count}</b>
               </span>
@@ -253,7 +270,7 @@ export default function LinkSkillManager() {
             }`}
             onClick={() => setTargetAgent("*")}
           >
-            🎯 全部 Agent
+            🎯 {t("linkTargetAll")}
           </span>
         </div>
 
@@ -261,7 +278,7 @@ export default function LinkSkillManager() {
         <div className="mt-3 flex items-center gap-2">
           <Input
             className="h-9 flex-1"
-            placeholder="搜索技能的名称、描述或仓库…"
+            placeholder={t("linkSearchPlaceholder")}
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
           />
@@ -276,7 +293,7 @@ export default function LinkSkillManager() {
                 }`}
                 onClick={() => setStatusFilter(f.key)}
               >
-                {f.label}
+                {t(f.labelKey)}
               </button>
             ))}
           </div>
@@ -285,31 +302,33 @@ export default function LinkSkillManager() {
         {/* 分组卡片列表 */}
         {loading && !snapshot && (
           <div className="flex items-center justify-center gap-2 py-16 text-sm text-muted-foreground">
-            <Loader2 size={16} className="animate-spin" /> 加载中…
+            <Loader2 size={16} className="animate-spin" /> {t("loading", { ns: "common" })}
           </div>
         )}
         {snapshot && rows.length === 0 && (
-          <div className="py-16 text-center text-sm text-muted-foreground">没有匹配的技能</div>
+          <div className="py-16 text-center text-sm text-muted-foreground">{t("linkNoMatch")}</div>
         )}
         {groups.map(({ repo, items }) => (
           <div key={repo} className="mt-4">
             <div className="mb-2 flex items-center gap-2 px-1 text-xs font-semibold text-muted-foreground">
               <span className="text-[10px]">◆</span>
               <span>{repo}</span>
-              <span className="font-normal">({items.length} 个)</span>
+              <span className="font-normal">
+                ({items.length} {t("linkCountSuffix")})
+              </span>
               <span
                 className="cursor-pointer rounded bg-accent/60 px-1.5 py-0.5 font-normal hover:bg-accent"
                 onClick={() => selectAll(items.map((r) => r.dir))}
-                title="勾选本组全部"
+                title={t("linkGroupSelectAll")}
               >
-                全选
+                {t("linkGroupSelectAll")}
               </span>
               <span
                 className="cursor-pointer rounded bg-accent/60 px-1.5 py-0.5 font-normal hover:bg-accent"
                 onClick={() => invertSelection(items.map((r) => r.dir))}
-                title="本组反选"
+                title={t("linkGroupInvert")}
               >
-                反选
+                {t("linkGroupInvert")}
               </span>
             </div>
             <div className="flex flex-col gap-2">
@@ -337,7 +356,7 @@ export default function LinkSkillManager() {
                           target="_blank"
                           rel="noreferrer"
                           className="text-xs text-muted-foreground/70 hover:text-primary"
-                          title="打开来源仓库"
+                          title={t("linkOpenSource")}
                           onClick={(e) => e.stopPropagation()}
                         >
                           ↗
@@ -349,24 +368,24 @@ export default function LinkSkillManager() {
                       {row.url && (
                         <a
                           className="cursor-pointer text-xs text-muted-foreground/70 hover:text-primary"
-                          title="从来源仓库更新此技能到最新版"
+                          title={t("linkUpdateOne")}
                           onClick={async (e) => {
                             e.stopPropagation();
                             try {
                               const outcomes = await linkSkillService.update([row.dir], null);
                               const out = outcomes[0];
                               if (out.status === "updated") {
-                                toast.success(`${out.detail ?? row.dir} 已更新`);
+                                toast.success(tNotify("linkUpdatedOne", { detail: out.detail ?? row.dir }));
                                 await refresh();
                               } else {
                                 toast.warning(`${out.dir}: ${out.detail ?? out.status}`);
                               }
                             } catch (err) {
-                              toast.error(`更新失败: ${String(err)}`);
+                              toast.error(tNotify("operationFailed", { error: String(err) }));
                             }
                           }}
                         >
-                          ↻ 更新
+                          ↻ {t("linkUpdateSelected")}
                         </a>
                       )}
                     </div>
@@ -381,7 +400,7 @@ export default function LinkSkillManager() {
                       return (
                         <span
                           key={agent.name}
-                          title={`${agent.name}: ${STATE_LABEL[st]}（点击切换启用/禁用）`}
+                          title={`${agent.name}: ${t(STATE_KEY[st])}（${t("linkToggleTooltip")}）`}
                           className={`flex h-6 w-6 cursor-pointer items-center justify-center rounded-full text-[11px] font-bold transition-transform hover:scale-110 ${
                             st === "linked"
                               ? "text-white"
@@ -412,27 +431,26 @@ export default function LinkSkillManager() {
         <div className="border-t border-border bg-card px-4 py-2.5">
           <div className="flex items-center gap-3 text-xs">
             <span className="text-muted-foreground">
-              已选 <b className="text-foreground">{selection.size}</b> 项 · 目标{" "}
-              <b className="text-foreground">{targetName}</b>
+              {t("linkSelected", { count: selection.size, target: targetName })}
             </span>
-            <label className="flex cursor-pointer items-center gap-1 text-muted-foreground" title="启用时把真实副本替换为链接（删除副本，不可恢复）">
+            <label className="flex cursor-pointer items-center gap-1 text-muted-foreground" title={t("linkOverwriteTooltip")}>
               <input
                 type="checkbox"
                 className="h-3.5 w-3.5"
                 checked={overwrite}
                 onChange={(e) => setOverwrite(e.target.checked)}
               />
-              覆盖副本(慎用)
+              {t("linkOverwrite")}
             </label>
             <div className="flex-1" />
             <Button size="sm" disabled={busy} onClick={handleEnable}>
-              ✅ 批量启用
+              {t("linkBatchEnable")}
             </Button>
             <Button size="sm" variant="destructive" disabled={busy} onClick={handleDisable}>
-              ⛔ 批量禁用
+              {t("linkBatchDisable")}
             </Button>
             <Button size="sm" variant="ghost" onClick={clearSelection}>
-              清空
+              {t("linkClear")}
             </Button>
           </div>
         </div>
