@@ -60,6 +60,9 @@ jobs:
             exit 1
           fi
 
+      - name: Validate Chinese release notes
+        run: node .github/scripts/extract-changelog.mjs "${{ steps.tag.outputs.version }}" > /dev/null
+
   build:
     name: Build (${{ matrix.label }})
     runs-on: ${{ matrix.platform }}
@@ -209,7 +212,8 @@ jobs:
             chmod +x cc-panes_*.AppImage
             ./cc-panes_*.AppImage
             ```
-          releaseDraft: false
+          # Keep the new version private until all packages and updater metadata are ready.
+          releaseDraft: true
           # tag 含 `-`（如 v0.12.0-beta.1）自动标 prerelease：GitHub 的 releases/latest
           # 排除 prerelease，稳定版用户的 updater（指向 latest/download/latest.json）
           # 不会被推 beta——beta 只面向手动下载者。
@@ -269,6 +273,13 @@ jobs:
           set -euo pipefail
           TAG="${GITHUB_REF#refs/tags/}"
           export TAG REPO="$GITHUB_REPOSITORY" VERSION="${TAG#v}"
+          node .github/scripts/extract-changelog.mjs "$VERSION" > release-notes.txt
+          gh release view "$TAG" --repo "$REPO" --json body --jq '.body | split("## macOS 安装说明")[1] // empty' > installation-notes.txt
+          if [ -s installation-notes.txt ]; then
+            printf '\n---\n\n## macOS 安装说明\n' >> release-notes.txt
+            cat installation-notes.txt >> release-notes.txt
+          fi
+          gh release edit "$TAG" --repo "$REPO" --notes-file release-notes.txt
           gh release view "$TAG" --repo "$REPO" --json body --jq .body > release-body.txt
           gh release view "$TAG" --repo "$REPO" --json assets --jq '.assets[].name' > release-assets.txt
           node .github/scripts/merge-latest-json.mjs
@@ -384,3 +395,21 @@ jobs:
             sleep 10
           done
           gh release upload "v${{ steps.tag.outputs.version }}" "$APK_NAME" --repo "$GITHUB_REPOSITORY" --clobber
+
+  publish-release:
+    name: Publish complete release
+    runs-on: ubuntu-latest
+    needs: [build, windows-portable, mobile-apk, publish-updater-json]
+    permissions:
+      contents: write
+    steps:
+      - name: Make the validated release public
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+          if [[ "$TAG" == *-* ]]; then
+            gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --draft=false --prerelease
+          else
+            gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --draft=false --latest
+          fi
