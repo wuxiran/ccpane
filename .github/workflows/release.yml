@@ -401,8 +401,25 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build, windows-portable, mobile-apk, publish-updater-json]
     permissions:
+      actions: read
       contents: write
     steps:
+      - name: Require successful CI for this exact commit
+        timeout-minutes: 32
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          for attempt in $(seq 1 60); do
+            if gh run list --repo "$GITHUB_REPOSITORY" --workflow ci.yml \
+              --commit "$GITHUB_SHA" --event push --limit 20 --json status,conclusion \
+              --jq 'any(.[]; .status == "completed" and .conclusion == "success")' | grep -qx true; then
+              exit 0
+            fi
+            sleep 30
+          done
+          echo "::error::No successful CI run for release commit $GITHUB_SHA; release remains a draft."
+          exit 1
+
       - name: Make the validated release public
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

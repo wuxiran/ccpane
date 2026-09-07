@@ -24,7 +24,7 @@ This release fixes long-running terminal stalls, Grok fullscreen recovery and tr
 
 ### Release
 
-- Publish the release after desktop/mobile packages, the portable archive and updater metadata have completed; validate the Chinese changelog before building.
+- Publish only after desktop/mobile packages, the portable archive, updater metadata and CI for the exact release commit have completed successfully; validate the Chinese changelog before building.
 
 ## 0.12.11 - 2026-09-06
 
