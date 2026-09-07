@@ -4,6 +4,27 @@
 > file. Add the entry to both — a missing Chinese entry fails `validate-version` before any build
 > starts.
 
+## 0.12.12 - 2026-09-07
+
+This release fixes long-running terminal stalls, Grok fullscreen recovery and transcript crashes, and adds automatic performance records.
+
+### Fixed
+
+- Opening Grok conversation history no longer crashes the app when a tool preview cuts into a Chinese or emoji UTF-8 character. Transcript parsing runs off the native IPC thread and worker failures return a typed error.
+- Raw terminal recovery restores the initial alternate-screen mode after the rolling buffer evicts its entry sequence, while respecting explicit strip overrides and serialized checkpoints.
+- Polling fallback tracks output byte coordinates instead of replaying the whole history when the rolling window advances; WebSocket connections are retried after an outage.
+- Large history replays use bounded writes with main-thread yields. Hidden sessions defer recovery and disposed views cancel pending work.
+- Window restoration resynchronizes layout and PTY dimensions without rebuilding WebGL atlases on ordinary heartbeats.
+- Upgrades from 0.12.11 merge saved layouts when isolation is disabled, stop automatically replacing local layouts with shared snapshots, and protect sessions across all saved scopes.
+
+### Added
+
+- Automatic performance records every 15 seconds, with a 64 MiB rotating limit, per-process resource usage and terminal backlog/transport metrics. Terminal text and keyboard input are excluded. About settings provide directory access and incident marking; an offline summary script supports later diagnosis.
+
+### Release
+
+- Publish the release after desktop/mobile packages, the portable archive and updater metadata have completed; validate the Chinese changelog before building.
+
 ## 0.12.11 - 2026-09-06
 
 Mostly a front-end release: first-screen JavaScript is cut by more than half, the UI/UX got a systematic pass, Agent Chat went from a flat message list to a conversation with turns, hierarchy and visible subagents, and the home page gained a direct line to the orchestration concierge.
