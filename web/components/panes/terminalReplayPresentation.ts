@@ -108,7 +108,7 @@ function replaceCanvasWithText(copy: HTMLElement, term: ReplayPresentationTermin
   pre.style.fontFamily = term.options?.fontFamily ?? "monospace";
   pre.style.fontSize = `${term.options?.fontSize ?? 14}px`;
   pre.style.lineHeight = `${parseFloat(screen.style.height) / (term.rows ?? 1) || 17}px`;
-  pre.style.color = term.options?.theme?.foreground ?? "#ffffff";
+  pre.style.color = term.options?.theme?.foreground ?? "var(--app-text-primary)";
   pre.textContent = Array.from({ length: term.rows ?? 1 }, (_, row) =>
     buffer.getLine?.((buffer.viewportY ?? 0) + row)?.translateToString(false) ?? "").join("\n");
   screen.replaceChildren(pre);
