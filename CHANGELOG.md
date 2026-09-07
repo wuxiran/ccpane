@@ -16,6 +16,7 @@ This release fixes long-running terminal stalls, Grok fullscreen recovery and tr
 - Large history replays use bounded writes with main-thread yields. Hidden sessions defer recovery and disposed views cancel pending work.
 - Window restoration resynchronizes layout and PTY dimensions without rebuilding WebGL atlases on ordinary heartbeats.
 - Upgrades from 0.12.11 merge saved layouts when isolation is disabled, stop automatically replacing local layouts with shared snapshots, and protect sessions across all saved scopes.
+- Recovery keeps a static terminal frame while parsing old redraws, then restores the reading position and reveals the final state. Parsed checkpoints are captured after recovery, with current write ownership checked before upload.
 
 ### Added
 

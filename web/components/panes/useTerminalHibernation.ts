@@ -22,6 +22,7 @@ import {
 } from "./terminalHibernation";
 import type { TerminalHiddenWriteBuffer } from "./terminalHiddenWriteBuffer";
 import type { TerminalRendererController } from "./terminalRendererController";
+import { withTerminalReplayPresentation } from "./terminalReplayPresentation";
 
 interface RefValue<T> {
   current: T;
@@ -325,7 +326,11 @@ interface ReplayAttachOrWakeOptions {
 }
 
 /** attach 分支的回放选路：休眠容器优先，普通 attach / 溢出走后端 snapshot。 */
-export async function replayAttachOrWake({
+export function replayAttachOrWake(options: ReplayAttachOrWakeOptions): Promise<void> {
+  return withTerminalReplayPresentation(options.term, () => restoreAttachOrWake(options));
+}
+
+async function restoreAttachOrWake({
   canWrite,
   term,
   sessionId,

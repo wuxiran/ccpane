@@ -2,14 +2,10 @@ import type { TerminalRecoverySnapshot } from "@/types";
 import { reanchorSeq } from "./terminalOutputSeqTracker";
 import { writeTerminalReplay } from "./terminalReplayChunks";
 import { restoreReplayBufferMode } from "./terminalReplayBufferMode";
+import { withTerminalReplayPresentation, type ReplayPresentationTerminal } from "./terminalReplayPresentation";
+import { checkpointRecoveredTerminal } from "./terminalRecoveryCheckpoint";
 
-interface ReplayTerminal {
-  buffer: {
-    active: {
-      type: "normal" | "alternate";
-    };
-  };
-}
+type ReplayTerminal = ReplayPresentationTerminal;
 type ReplayLogger = (event: string, payload?: Record<string, unknown>) => void;
 
 interface ReplayAttachedSessionOptions {
@@ -34,7 +30,11 @@ export function reanchorAfterRecovery(
   reanchorSeq(sessionId, snapshot.endSeq, snapshot.checkpointEpoch);
 }
 
-export async function replayAttachedSession({
+export function replayAttachedSession(options: ReplayAttachedSessionOptions): Promise<TerminalRecoverySnapshot | null> {
+  return withTerminalReplayPresentation(options.term, () => restoreAttachedSnapshot(options));
+}
+
+async function restoreAttachedSnapshot({
   canWrite,
   term,
   sessionId,
@@ -84,6 +84,7 @@ export async function replayAttachedSession({
   }
   syncTrackedBufferType("session.attach-existing.replay");
   reanchorAfterRecovery(sessionId, snapshot);
+  checkpointRecoveredTerminal(term, sessionId);
 
   debugLog("session.attach-existing.replay.end", {
     attachSessionId: sessionId,

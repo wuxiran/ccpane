@@ -9,6 +9,7 @@ import type { attachTerminalInputTrace } from "../terminalInputTrace";
 import type { attachTerminalDomInputFallback } from "../terminalDomInputFallback";
 import type { attachTerminalImeGuard } from "../terminalImeGuard";
 import type { createTerminalWriteFlowControl } from "../terminalWriteFlowControl";
+import { unregisterRecoveryCheckpointSource } from "../terminalRecoveryCheckpoint";
 
 interface RefValue<T> {
   current: T;
@@ -112,6 +113,7 @@ export function disposeTerminalView(
   const rendererToDispose = refs.rendererControllerRef.current;
   const fitToDispose = refs.fitAddonRef.current;
   const termToDispose = refs.terminalInstanceRef.current;
+  if (termToDispose) unregisterRecoveryCheckpointSource(termToDispose);
   refs.terminalInstanceRef.current = null;
   refs.rendererControllerRef.current = null;
   refs.fitAddonRef.current = null;

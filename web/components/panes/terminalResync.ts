@@ -3,6 +3,8 @@ import { reanchorAfterRecovery } from "./terminalReplay";
 import { noteTerminalPerformanceResync } from "@/services/performanceMetrics";
 import { writeTerminalReplay } from "./terminalReplayChunks";
 import { restoreReplayBufferMode } from "./terminalReplayBufferMode";
+import { withTerminalReplayPresentation, type ReplayPresentationTerminal } from "./terminalReplayPresentation";
+import { checkpointRecoveredTerminal } from "./terminalRecoveryCheckpoint";
 
 /**
  * 从后端恢复快照（checkpoint+delta）整体重同步终端画面。
@@ -41,13 +43,8 @@ interface RefValue<T> {
   current: T;
 }
 
-interface ResyncTerminal {
+interface ResyncTerminal extends ReplayPresentationTerminal {
   reset: () => void;
-  buffer: {
-    active: {
-      type: "normal" | "alternate";
-    };
-  };
 }
 type ResyncLogger = (event: string, payload?: Record<string, unknown>) => void;
 
@@ -65,7 +62,11 @@ interface ResyncFromReplaySnapshotOptions {
   debugLog: ResyncLogger;
 }
 
-export async function resyncFromReplaySnapshot({
+export function resyncFromReplaySnapshot(options: ResyncFromReplaySnapshotOptions): Promise<boolean> {
+  return withTerminalReplayPresentation(options.term, () => restoreSnapshot(options));
+}
+
+async function restoreSnapshot({
   canWrite,
   term,
   sessionId,
@@ -140,6 +141,7 @@ export async function resyncFromReplaySnapshot({
   }
   syncTrackedBufferType(`terminal.resync.${reason}`);
   reanchorAfterRecovery(sessionId, snapshot);
+  checkpointRecoveredTerminal(term, sessionId);
 
   debugLog("terminal.resync.end", {
     sessionId,
@@ -211,10 +213,11 @@ export function createTerminalDesyncHandler({
       return Promise.resolve(false);
     }
     const canWrite = () => !disposed && terminalRef.current === term;
+    // Freeze may wait one WebGL render; close the output gate before that await.
+    coreResyncActive = true;
+    setResyncActive(true);
 
     const run = async (): Promise<boolean> => {
-      coreResyncActive = true;
-      setResyncActive(true);
       // 丢弃 desync 前的不完整积压（缺口在它中间），闸门保证之后的新输出进积压。
       hiddenWriteBufferRef.current?.reset();
       const resynced = await resyncFromReplaySnapshot({
@@ -237,7 +240,7 @@ export function createTerminalDesyncHandler({
       await onResyncSettled(resynced);
       return resynced;
     };
-    const completion = run()
+    const completion = withTerminalReplayPresentation(term, run)
       .catch((error) => {
         debugLog("terminal.resync.settled.failed", {
           error: error instanceof Error ? error.message : String(error),

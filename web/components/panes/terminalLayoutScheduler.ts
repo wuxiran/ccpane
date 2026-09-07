@@ -1,5 +1,6 @@
 import type { FitAddon } from "@xterm/addon-fit";
 import type { Terminal } from "@xterm/xterm";
+import { deferTerminalLayoutDuringReplay } from "./terminalReplayPresentation";
 import {
   bindTerminalCompositionRecovery,
   type AnimationFrameScheduler,
@@ -109,6 +110,7 @@ export function createTerminalLayoutScheduler({
   let lastBackendResizeAt = 0;
   let pendingBackendSize: { cols: number; rows: number } | null = null;
   let disposed = false;
+  const replayLayoutOwner = {};
   let pendingReason: string | null = null;
   let pendingBackendSync = false;
   let pendingSyncAllowsInactive = false;
@@ -212,6 +214,11 @@ export function createTerminalLayoutScheduler({
     const fitAddon = getFitAddon();
     const host = getHost();
     if (!term || !fitAddon || !host) return null;
+    if (deferTerminalLayoutDuringReplay(term, replayLayoutOwner, () =>
+      flush("replay.complete", { force: true, allowInactive: true }))) {
+      pendingReason = reason;
+      return null;
+    }
 
     if (!isActive() && !options.allowInactive) {
       pendingReason = reason;
