@@ -1,5 +1,7 @@
 import type { TerminalRecoverySnapshot } from "@/types";
 import { reanchorSeq } from "./terminalOutputSeqTracker";
+import { writeTerminalReplay } from "./terminalReplayChunks";
+import { restoreReplayBufferMode } from "./terminalReplayBufferMode";
 
 interface ReplayTerminal {
   buffer: {
@@ -11,6 +13,7 @@ interface ReplayTerminal {
 type ReplayLogger = (event: string, payload?: Record<string, unknown>) => void;
 
 interface ReplayAttachedSessionOptions {
+  canWrite?: () => boolean;
   term: ReplayTerminal;
   sessionId: string;
   getRecoverySnapshot: (sessionId: string) => Promise<TerminalRecoverySnapshot | null>;
@@ -32,6 +35,7 @@ export function reanchorAfterRecovery(
 }
 
 export async function replayAttachedSession({
+  canWrite,
   term,
   sessionId,
   getRecoverySnapshot,
@@ -41,6 +45,7 @@ export async function replayAttachedSession({
   debugLog,
 }: ReplayAttachedSessionOptions): Promise<TerminalRecoverySnapshot | null> {
   const snapshot = await getRecoverySnapshot(sessionId);
+  if (canWrite && !canWrite()) return null;
 
   if (!snapshot) {
     debugLog("session.attach-existing.replay.skip", {
@@ -50,7 +55,7 @@ export async function replayAttachedSession({
     return null;
   }
 
-  if (!snapshot.checkpoint && !snapshot.delta) {
+  if (!snapshot.checkpoint && !snapshot.delta && term.buffer.active.type === snapshot.bufferMode) {
     debugLog("session.attach-existing.replay.skip", {
       attachSessionId: sessionId,
       reason: "empty-snapshot",
@@ -70,10 +75,12 @@ export async function replayAttachedSession({
 
   // 双管道（裁决 B）：photo 直写、delta 过 renderTerminalData。
   if (snapshot.checkpoint) {
-    await writeCheckpointData(snapshot.checkpoint.snapshotAnsi);
+    await writeTerminalReplay(snapshot.checkpoint.snapshotAnsi, writeCheckpointData, { canWrite });
+  } else {
+    await restoreReplayBufferMode(snapshot, term, writeData, canWrite);
   }
   if (snapshot.delta) {
-    await writeData(snapshot.delta);
+    await writeTerminalReplay(snapshot.delta, writeData, { canWrite });
   }
   syncTrackedBufferType("session.attach-existing.replay");
   reanchorAfterRecovery(sessionId, snapshot);

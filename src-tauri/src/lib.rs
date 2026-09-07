@@ -2277,6 +2277,18 @@ pub fn run() {
                     app_handle.clone(),
                     history_watch_manager.clone(),
                 )));
+                match app.path().app_log_dir() {
+                    Ok(directory) => {
+                        let recorder = services::performance_recorder::PerformanceRecorder::start(
+                            directory.join("performance"),
+                            app.state::<Arc<AppPaths>>().runtime_dir().join("daemon-manifest.json"),
+                            app.package_info().version.to_string(),
+                            app.state::<Arc<TerminalDaemonEventBridge>>().inner().clone(),
+                        );
+                        app.manage(recorder);
+                    }
+                    Err(error) => warn!(%error, "performance recorder directory unavailable"),
+                }
                 let tauri_emitter: std::sync::Arc<dyn cc_panes_core::events::EventEmitter> =
                     Arc::new(TauriEmitter::new(app_handle.clone()));
 
@@ -3053,6 +3065,9 @@ pub fn run() {
             submit_to_session,
             get_all_terminal_status,
             get_bridge_stats,
+            commands::record_performance_snapshot,
+            commands::get_performance_recorder_status,
+            commands::mark_performance_incident,
             get_available_shells,
             get_windows_build_number,
             check_environment,
@@ -3549,6 +3564,9 @@ pub fn run() {
                 }
             }
             if let tauri::RunEvent::Exit = event {
+                if let Some(recorder) = app_handle.try_state::<Arc<services::performance_recorder::PerformanceRecorder>>() {
+                    recorder.stop();
+                }
                 info!("[cleanup] Application exiting, cleaning up resources...");
 
                 app_handle.state::<Arc<TaskQueueWorker>>().stop();

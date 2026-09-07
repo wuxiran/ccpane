@@ -144,6 +144,7 @@ export async function launchOrAttachTerminalSession({
         sessionId = attachSessionId;
         try {
           await replayAttachOrWake({
+            canWrite: isMounted,
             term,
             sessionId,
             wake,

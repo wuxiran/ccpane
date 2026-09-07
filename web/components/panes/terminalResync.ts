@@ -1,5 +1,8 @@
 import type { TerminalRecoverySnapshot } from "@/types";
 import { reanchorAfterRecovery } from "./terminalReplay";
+import { noteTerminalPerformanceResync } from "@/services/performanceMetrics";
+import { writeTerminalReplay } from "./terminalReplayChunks";
+import { restoreReplayBufferMode } from "./terminalReplayBufferMode";
 
 /**
  * 从后端恢复快照（checkpoint+delta）整体重同步终端画面。
@@ -10,8 +13,8 @@ import { reanchorAfterRecovery } from "./terminalReplay";
  * 2. 后台休眠期间积压超上限——休眠字符串已不完整，唤醒时无法无损回放。
  *
  * 语义：`reset()` 丢弃现有画面（含 scrollback）→ photo 直写 → delta 渲染写
- * （裁决 B 双管道）。无照片时 delta 是会话起点开始的 8MB 窗口，超窗历史丢失
- * ——严格优于花屏。
+ * （裁决 B 双管道）。无照片时 delta 是末尾最多 8MiB 的原始输出窗口，
+ * 起始屏幕模式需要从切换序列或后台元数据补回；超窗的旧画面无法恢复。
  *
  * 竞态说明：快照请求在途期间新到的 chunk 可能既包含在快照里、又经实时链路
  * 写入（一次性视觉重复；TUI 全屏重绘自愈）。调用方若能暂停实时写入
@@ -49,6 +52,7 @@ interface ResyncTerminal {
 type ResyncLogger = (event: string, payload?: Record<string, unknown>) => void;
 
 interface ResyncFromReplaySnapshotOptions {
+  canWrite?: () => boolean;
   term: ResyncTerminal;
   sessionId: string;
   reason: string;
@@ -62,6 +66,7 @@ interface ResyncFromReplaySnapshotOptions {
 }
 
 export async function resyncFromReplaySnapshot({
+  canWrite,
   term,
   sessionId,
   reason,
@@ -78,6 +83,7 @@ export async function resyncFromReplaySnapshot({
   // 与写失败提示，两者因此都落在干净的 pen 上（Orca #14241 的
   // "clears the SGR pen before draining abandoned chunks"）。
   const groundAfterGap = async () => {
+    if (canWrite && !canWrite()) return;
     try {
       await writeCheckpointData(GROUND_AFTER_BYTE_GAP);
     } catch (error) {
@@ -120,13 +126,17 @@ export async function resyncFromReplaySnapshot({
     deltaLength: snapshot.delta.length,
   });
 
-  // 序 = reset → photo 直写 → delta 渲染写 → syncTrackedBufferType → reanchor。
+  // 序 = reset → photo 直写（无 photo 时补屏幕模式）→ delta 渲染写 → sync → reanchor。
+  if (canWrite && !canWrite()) return false;
+  noteTerminalPerformanceResync(sessionId, snapshot.delta.length + (snapshot.checkpoint?.snapshotAnsi.length ?? 0));
   term.reset();
   if (snapshot.checkpoint) {
-    await writeCheckpointData(snapshot.checkpoint.snapshotAnsi);
+    await writeTerminalReplay(snapshot.checkpoint.snapshotAnsi, writeCheckpointData, { canWrite });
+  } else {
+    await restoreReplayBufferMode(snapshot, term, writeData, canWrite);
   }
   if (snapshot.delta) {
-    await writeData(snapshot.delta);
+    await writeTerminalReplay(snapshot.delta, writeData, { canWrite });
   }
   syncTrackedBufferType(`terminal.resync.${reason}`);
   reanchorAfterRecovery(sessionId, snapshot);
@@ -140,6 +150,7 @@ export async function resyncFromReplaySnapshot({
 }
 
 interface CreateTerminalDesyncHandlerOptions {
+  isRenderVisible?: () => boolean;
   sessionId: string;
   terminalRef: RefValue<ResyncTerminal | null>;
   hiddenWriteBufferRef: RefValue<{ reset(): void } | null>;
@@ -172,6 +183,7 @@ interface CreateTerminalDesyncHandlerOptions {
  * 重绘信号只补画活动区，历史全靠快照，重建失败时才允许破坏性清空。
  */
 export function createTerminalDesyncHandler({
+  isRenderVisible = () => true,
   sessionId,
   terminalRef,
   hiddenWriteBufferRef,
@@ -182,14 +194,23 @@ export function createTerminalDesyncHandler({
   setResyncActive,
   onResyncSettled,
   debugLog,
-}: CreateTerminalDesyncHandlerOptions): () => Promise<boolean> {
+}: CreateTerminalDesyncHandlerOptions): (() => Promise<boolean>) & { dispose: () => void } {
   let activeResync: Promise<boolean> | null = null;
   let coreResyncActive = false;
+  let disposed = false;
 
-  return () => {
+  const handler = () => {
+    if (disposed) return Promise.resolve(false);
     if (coreResyncActive && activeResync) return activeResync;
     const term = terminalRef.current;
     if (!term) return Promise.resolve(false);
+    if (!isRenderVisible()) {
+      // Keep output behind the recovery gate until the visible-edge flusher calls us.
+      setResyncActive(true);
+      hiddenWriteBufferRef.current?.reset();
+      return Promise.resolve(false);
+    }
+    const canWrite = () => !disposed && terminalRef.current === term;
 
     const run = async (): Promise<boolean> => {
       coreResyncActive = true;
@@ -197,6 +218,7 @@ export function createTerminalDesyncHandler({
       // 丢弃 desync 前的不完整积压（缺口在它中间），闸门保证之后的新输出进积压。
       hiddenWriteBufferRef.current?.reset();
       const resynced = await resyncFromReplaySnapshot({
+        canWrite,
         term,
         sessionId,
         reason: "daemon-desync",
@@ -209,8 +231,9 @@ export function createTerminalDesyncHandler({
         (recovered) => recovered,
         () => false,
       );
-      setResyncActive(false);
       coreResyncActive = false;
+      if (!canWrite()) return false;
+      setResyncActive(false);
       await onResyncSettled(resynced);
       return resynced;
     };
@@ -227,4 +250,6 @@ export function createTerminalDesyncHandler({
     activeResync = completion;
     return completion;
   };
+  handler.dispose = () => { if (disposed) return; disposed = true; setResyncActive(false); };
+  return handler;
 }

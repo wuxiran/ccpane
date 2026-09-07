@@ -18,7 +18,6 @@ export interface TerminalViewDisposableRefs {
   onDataDisposableRef: RefValue<IDisposable | null>;
   currentSessionIdRef: RefValue<string | null>;
   atlasResetTimerRef: RefValue<ReturnType<typeof setTimeout> | null>;
-  webglHeartbeatTimerRef: RefValue<ReturnType<typeof setInterval> | null>;
   layoutSchedulerRef: RefValue<TerminalLayoutScheduler | null>;
   resizeObserverRef: RefValue<ResizeObserver | null>;
   parserDisposableRefs: RefValue<IDisposable[]>;
@@ -67,10 +66,6 @@ export function disposeTerminalView(
   if (refs.atlasResetTimerRef.current) {
     clearTimeout(refs.atlasResetTimerRef.current);
     refs.atlasResetTimerRef.current = null;
-  }
-  if (refs.webglHeartbeatTimerRef.current) {
-    clearInterval(refs.webglHeartbeatTimerRef.current);
-    refs.webglHeartbeatTimerRef.current = null;
   }
   refs.layoutSchedulerRef.current?.dispose();
   refs.layoutSchedulerRef.current = null;
